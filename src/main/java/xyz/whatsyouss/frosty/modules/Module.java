@@ -269,6 +269,6 @@ public class Module {
     }
 
     public static enum category {
-        Combat, Movement, Render, Other, Client, Fishing, Foraging, Hunting, Mining, Farming, Fun
+        Combat, Movement, Render, Other, Client, Fishing, Foraging, Hunting, Mining, Farming, Fun, Dungeon
     }
 }

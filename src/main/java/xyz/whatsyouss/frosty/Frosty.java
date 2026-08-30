@@ -75,6 +75,7 @@ public class Frosty implements ModInitializer {
 		EVENT_BUS.registerLambdaFactory("xyz.whatsyouss.frosty", (lookupInMethod, klass) -> (MethodHandles.Lookup) lookupInMethod.invoke(null, klass, MethodHandles.lookup()));
 		EVENT_BUS.subscribe(this);
 		EVENT_BUS.subscribe(new Rotations());
+		LocationUtils.init();
 		ConfigManager.createConfigDir();
 	}
 
