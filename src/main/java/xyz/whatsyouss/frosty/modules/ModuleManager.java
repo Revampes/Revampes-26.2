@@ -107,6 +107,7 @@ public class ModuleManager {
     public static AutoGFS autoGFS;
     public static KeyHighlight keyHighlight;
     public static MobHighlight mobHighlight;
+    public static Etherwarp etherwarp;
 
     public void register() {
         this.addModule(tps = new TPS());
@@ -182,6 +183,7 @@ public class ModuleManager {
         this.addModule(autoGFS = new AutoGFS());
         this.addModule(keyHighlight = new KeyHighlight());
         this.addModule(mobHighlight = new MobHighlight());
+        this.addModule(etherwarp = new Etherwarp());
         modules.sort(Comparator.comparing(Module::getName));
     }
 
