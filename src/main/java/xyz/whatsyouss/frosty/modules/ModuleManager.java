@@ -5,6 +5,8 @@ import xyz.whatsyouss.frosty.modules.impl.combat.AutoClicker;
 import xyz.whatsyouss.frosty.modules.impl.combat.KillAura;
 import xyz.whatsyouss.frosty.modules.impl.combat.Velocity;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.AutoGFS;
+import xyz.whatsyouss.frosty.modules.impl.dungeon.KeyHighlight;
+import xyz.whatsyouss.frosty.modules.impl.dungeon.MobHighlight;
 import xyz.whatsyouss.frosty.modules.impl.farming.*;
 import xyz.whatsyouss.frosty.modules.impl.fishing.AutoFish;
 import xyz.whatsyouss.frosty.modules.impl.foraging.LushlilacNuker;
@@ -103,6 +105,8 @@ public class ModuleManager {
     public static AntiTexture antiTexture;
 
     public static AutoGFS autoGFS;
+    public static KeyHighlight keyHighlight;
+    public static MobHighlight mobHighlight;
 
     public void register() {
         this.addModule(tps = new TPS());
@@ -176,6 +180,8 @@ public class ModuleManager {
         this.addModule(murderMystery = new MurderMystery());
         this.addModule(antiTexture = new AntiTexture());
         this.addModule(autoGFS = new AutoGFS());
+        this.addModule(keyHighlight = new KeyHighlight());
+        this.addModule(mobHighlight = new MobHighlight());
         modules.sort(Comparator.comparing(Module::getName));
     }
 
