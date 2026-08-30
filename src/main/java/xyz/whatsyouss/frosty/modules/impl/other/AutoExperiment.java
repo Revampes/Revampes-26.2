@@ -28,16 +28,20 @@ import net.minecraft.ChatFormatting;
 import xyz.whatsyouss.frosty.events.impl.PreUpdateEvent;
 import xyz.whatsyouss.frosty.modules.Module;
 import xyz.whatsyouss.frosty.settings.impl.SliderSetting;
+import xyz.whatsyouss.frosty.settings.impl.ButtonSetting;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static net.minecraft.world.item.Items.DYED_TERRACOTTA;
 import static net.minecraft.world.item.Items.STAINED_GLASS;
 
 public class AutoExperiment extends Module {
 
-    private SliderSetting delay;
+    private SliderSetting startDelayMs;
+    private SliderSetting clickDelayMs;
+    private ButtonSetting randomDelay;
 
     private static final Object2ObjectMap<Item, Item> TERRACOTTA_TO_GLASS = Object2ObjectMaps.unmodifiable(
             new Object2ObjectArrayMap<>(
@@ -67,12 +71,17 @@ public class AutoExperiment extends Module {
     private String currentScreenTitle = "";
     private boolean isChronomatronActive = false;
     private boolean isUltrasequencerActive = false;
-    private int tickCounter = 0;
+    private long lastClickTime = 0;
+    private long startDelayTimer = 0;
+    private boolean isInitialDelay = true;
+    private final Random random = new Random();
 
     public AutoExperiment() {
         super("AutoExperiment", "自动附魔桌", category.Other);
 
-        this.registerSetting(delay = new SliderSetting("Delay", 4, 2, 8, 1, "点击延迟"));
+        this.registerSetting(startDelayMs = new SliderSetting("Start Delay (ms)", 200, 150, 1000, 50, "第一次点击的延迟"));
+        this.registerSetting(clickDelayMs = new SliderSetting("Click Delay (ms)", 200, 50, 1000, 50, "每次点击的延迟"));
+        this.registerSetting(randomDelay = new ButtonSetting("Random Delay", "随机延迟", false));
     }
 
     @EventHandler
@@ -103,8 +112,43 @@ public class AutoExperiment extends Module {
         }
     }
 
+    private long getEffectiveDelay() {
+        long baseDelay = (long) clickDelayMs.getInput();
+        if (randomDelay.isToggled()) {
+            // Add 10-30ms random delay
+            baseDelay += 10 + random.nextInt(21); // 10-30 inclusive
+        }
+        return baseDelay;
+    }
+
+    private boolean shouldClick() {
+        long currentTime = System.currentTimeMillis();
+        
+        // Handle initial delay
+        if (isInitialDelay) {
+            if (currentTime - startDelayTimer < startDelayMs.getInput()) {
+                return false;
+            }
+            isInitialDelay = false;
+            lastClickTime = currentTime;
+            return true;
+        }
+        
+        // Regular click delay
+        if (currentTime - lastClickTime >= getEffectiveDelay()) {
+            lastClickTime = currentTime;
+            return true;
+        }
+        return false;
+    }
+
+    private void resetClickTiming() {
+        lastClickTime = 0;
+        startDelayTimer = System.currentTimeMillis();
+        isInitialDelay = true;
+    }
+
     private void tickChronomatron(AbstractContainerScreen<?> screen) {
-        tickCounter++;
         AbstractContainerMenu menu = screen.getMenu();
 
         chronoCurrentCycle = getChronoCycle(menu);
@@ -113,6 +157,7 @@ public class AutoExperiment extends Module {
         if ((chronoCurrentCycle > 0 && currentModeItem == Items.GLOWSTONE) ||
                 (chronoCurrentCycle == chronoLastCycle && currentModeItem != chronoLastModeItem)) {
             chronoStartSeconds = -1;
+            resetClickTiming(); // Reset timing when cycle changes
             if (!chronoGlintFound) {
                 for (int i = 10; i < 43; i++) {
                     if (menu.getSlot(i).getItem().hasFoil()) {
@@ -129,9 +174,10 @@ public class AutoExperiment extends Module {
         } else {
             if (chronoStartSeconds == -1) {
                 chronoStartSeconds = menu.getSlot(49).getItem().getCount();
+                resetClickTiming(); // Reset timing when starting the sequence
             }
 
-            if (tickCounter % delay.getInput() == 0 &&
+            if (shouldClick() &&
                     menu.getSlot(49).getItem().getCount() < chronoStartSeconds) {
                 inputChronomatronSequence(menu, screen);
             }
@@ -171,12 +217,12 @@ public class AutoExperiment extends Module {
     }
 
     private void tickUltrasequencer(AbstractContainerScreen<?> screen) {
-        tickCounter++;
         AbstractContainerMenu menu = screen.getMenu();
         Item currentModeItem = menu.getSlot(49).getItem().getItem();
 
         if (currentModeItem == Items.GLOWSTONE) {
             ultraStartSeconds = -1;
+            resetClickTiming(); // Reset timing when mode changes
             for (int i = 0; i < 45; i++) {
                 ItemStack stack = menu.getSlot(i).getItem();
                 if (!BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath().contains("pane")) {
@@ -188,9 +234,10 @@ public class AutoExperiment extends Module {
         } else if (currentModeItem == Items.CLOCK) {
             if (ultraStartSeconds == -1) {
                 ultraStartSeconds = menu.getSlot(49).getItem().getCount();
+                resetClickTiming(); // Reset timing when starting the sequence
             }
 
-            if (tickCounter % delay.getInput() == 0 &&
+            if (shouldClick() &&
                     menu.getSlot(49).getItem().getCount() < ultraStartSeconds) {
                 inputUltrasequencerSequence(screen);
             }
@@ -245,5 +292,7 @@ public class AutoExperiment extends Module {
 
         isChronomatronActive = false;
         isUltrasequencerActive = false;
+        
+        resetClickTiming();
     }
 }
