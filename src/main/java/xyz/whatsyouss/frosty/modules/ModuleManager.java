@@ -7,6 +7,7 @@ import xyz.whatsyouss.frosty.modules.impl.combat.Velocity;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.AutoGFS;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.KeyHighlight;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.MobHighlight;
+import xyz.whatsyouss.frosty.modules.impl.render.blockanimation.BlockAnimation;
 import xyz.whatsyouss.frosty.modules.impl.farming.*;
 import xyz.whatsyouss.frosty.modules.impl.fishing.AutoFish;
 import xyz.whatsyouss.frosty.modules.impl.foraging.LushlilacNuker;
@@ -108,6 +109,7 @@ public class ModuleManager {
     public static KeyHighlight keyHighlight;
     public static MobHighlight mobHighlight;
     public static Etherwarp etherwarp;
+    public static BlockAnimation blockAnimation;
 
     public void register() {
         this.addModule(tps = new TPS());
@@ -184,6 +186,7 @@ public class ModuleManager {
         this.addModule(keyHighlight = new KeyHighlight());
         this.addModule(mobHighlight = new MobHighlight());
         this.addModule(etherwarp = new Etherwarp());
+        this.addModule(blockAnimation = new BlockAnimation());
         modules.sort(Comparator.comparing(Module::getName));
     }
 
