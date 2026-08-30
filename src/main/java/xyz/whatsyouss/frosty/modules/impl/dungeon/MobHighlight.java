@@ -79,7 +79,8 @@ public class MobHighlight extends Module {
         List<Entity> targetEntities = new ArrayList<>();
         List<MobType> targetTypes = new ArrayList<>();
 
-        AABB searchBox = new AABB(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
+        AABB searchBox = new AABB(mc.player.getX() - 128, mc.player.getY() - 128, mc.player.getZ() - 128,
+                                   mc.player.getX() + 128, mc.player.getY() + 128, mc.player.getZ() + 128);
         for (Entity entity : mc.level.getEntities(mc.player, searchBox, e -> true)) {
             if (entity instanceof ArmorStand armorStand) {
                 MobType type = getType(armorStand);

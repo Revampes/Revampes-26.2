@@ -77,7 +77,8 @@ public class KeyHighlight extends Module {
         }
 
         // Find key-carrying armor stands in the level
-        AABB searchBox = new AABB(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
+        AABB searchBox = new AABB(mc.player.getX() - 128, mc.player.getY() - 128, mc.player.getZ() - 128,
+                                   mc.player.getX() + 128, mc.player.getY() + 128, mc.player.getZ() + 128);
         List<Entity> stands = mc.level.getEntities(mc.player, searchBox, e -> e instanceof ArmorStand);
         for (Entity entity : stands) {
             if (entity instanceof ArmorStand stand) {
