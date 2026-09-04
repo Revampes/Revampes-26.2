@@ -62,8 +62,10 @@ public class FarmingCommand extends Command {
             case "delete" -> cmdDelete(args);
             case "save" -> cmdSave(args);
             case "load" -> cmdLoad(args);
+            case "unload" -> cmdUnload(args);
             case "start" -> cmdStart(args);
             case "stop" -> cmdStop();
+            case "poslist" -> cmdPosList();
             default -> printUsage();
         }
     }
@@ -235,6 +237,21 @@ public class FarmingCommand extends Command {
         Utils.addChatMessage("§aLoaded §f" + loaded.size() + " §awaypoints from §f\"" + name + "\"");
     }
 
+    private void cmdUnload(String[] args) {
+        if (!requireEnabled()) return;
+
+        List<double[]> wps = macro().getWaypoints();
+        if (wps.isEmpty()) {
+            sendError("No waypoint to unload.");
+            return;
+        }
+
+        int count = wps.size();
+        wps.clear();
+        Utils.addChatMessage("§cUnloaded all §f" + count + " §cwaypoints. Waypoint list is now empty");
+        Utils.addChatMessage("§eYou can reload a saved configuration with .fm load <name> or .fm add for new save");
+    }
+
 
     private void cmdStart(String[] args) {
         if (!requireGarden()) return;
@@ -270,6 +287,22 @@ public class FarmingCommand extends Command {
         Utils.addChatMessage("§eFarmingMacro stopped");
     }
 
+    private void cmdPosList() {
+        if (!requireEnabled()) return;
+
+        List<double[]> wps = macro().getWaypoints();
+        if (wps.isEmpty()) {
+            sendError("No waypoints defined");
+            return;
+        }
+
+        Utils.addChatMessage("§6=== Waypoints (" + wps.size() + ") ===");
+        for (int i = 0; i<=wps.size(); i++) {
+            double[] pos = wps.get(i);
+            Utils.addChatMessage("§f#" + (i+1) + ": §7" + fmtPos(pos));
+        }
+    }
+
 
     private double[] playerPos() {
         Vec3 p = mc.player.position();
@@ -281,6 +314,6 @@ public class FarmingCommand extends Command {
     }
 
     private void printUsage() {
-        Utils.addChatMessage("§eUsage: .fm <add|remove|insert <index>|delete <index>|save <name>|load <name>|start <index>|stop>");
+        Utils.addChatMessage("§eUsage: .fm <add|remove|insert <index>|delete <index>|save <name>|load <name>|unload|start <index>|stop>|poslist");
     }
 }

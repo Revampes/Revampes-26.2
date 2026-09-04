@@ -49,6 +49,7 @@ public class MobHighlight extends Module {
     private final ColorSetting felColor = new ColorSetting("Fel Color", new Color(0, 255, 255, 255));
     private final ColorSetting assassinColor = new ColorSetting("Assassin Color", new Color(128, 0, 128, 255));
     private final ColorSetting mimicColor = new ColorSetting("Mimic Color", new Color(255, 255, 255, 255));
+    private final ButtonSetting enableDepthCheck = new ButtonSetting("Depth Check (See through wall)", false);
 
     public MobHighlight() {
         super("MobHighlight", category.Dungeon);
@@ -67,6 +68,7 @@ public class MobHighlight extends Module {
         this.registerSetting(felColor);
         this.registerSetting(assassinColor);
         this.registerSetting(mimicColor);
+        this.registerSetting(enableDepthCheck);
     }
 
     @EventHandler
@@ -78,6 +80,8 @@ public class MobHighlight extends Module {
 
         List<Entity> targetEntities = new ArrayList<>();
         List<MobType> targetTypes = new ArrayList<>();
+
+        boolean depthCheck = enableDepthCheck.isToggled();
 
         AABB searchBox = new AABB(mc.player.getX() - 128, mc.player.getY() - 128, mc.player.getZ() - 128,
                                    mc.player.getX() + 128, mc.player.getY() + 128, mc.player.getZ() + 128);
@@ -115,10 +119,10 @@ public class MobHighlight extends Module {
             boolean doOutline = mode == null || mode.equals("Outline") || mode.equals("Both");
 
             if (doFill) {
-                RenderUtils.drawBoxFilled(stack, box, color, true);
+                RenderUtils.drawBoxFilled(stack, box, color, depthCheck);
             }
             if (doOutline) {
-                RenderUtils.drawBox(stack, box, color, (float) outlineWidth.getInput(), true);
+                RenderUtils.drawBox(stack, box, color, (float) outlineWidth.getInput(), depthCheck);
             }
         }
     }

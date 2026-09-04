@@ -111,6 +111,8 @@ public class ModuleManager {
     public static Etherwarp etherwarp;
     public static BlockAnimation blockAnimation;
 
+    public static AutoSell autoSell;
+
     public void register() {
         this.addModule(tps = new TPS());
         this.addModule(guiMove = new GuiMove());
@@ -187,6 +189,7 @@ public class ModuleManager {
         this.addModule(mobHighlight = new MobHighlight());
         this.addModule(etherwarp = new Etherwarp());
         this.addModule(blockAnimation = new BlockAnimation());
+        this.addModule(autoSell = new AutoSell());
         modules.sort(Comparator.comparing(Module::getName));
     }
 

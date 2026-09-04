@@ -35,6 +35,7 @@ public class KeyHighlight extends Module {
     private final ColorSetting witherLineColor = new ColorSetting("Wither Line Color", new Color(0, 0, 0, 204));
     private final ColorSetting bloodColor = new ColorSetting("Blood Color", new Color(255, 85, 85, 204));
     private final ColorSetting bloodLineColor = new ColorSetting("Blood Line Color", new Color(255, 85, 85, 204));
+    private final ButtonSetting enableDepthCheck = new ButtonSetting("Depth Check (See through wall)", false);
 
     private ArmorStand currentWitherKey = null;
     private ArmorStand currentBloodKey = null;
@@ -50,6 +51,7 @@ public class KeyHighlight extends Module {
         this.registerSetting(witherLineColor);
         this.registerSetting(bloodColor);
         this.registerSetting(bloodLineColor);
+        this.registerSetting(enableDepthCheck);
     }
 
     @Override
@@ -109,7 +111,7 @@ public class KeyHighlight extends Module {
         String mode = currentHighlight.getOption();
         boolean doFill = mode == null || mode.equals("Filled") || mode.equals("Both");
         boolean doOutline = mode == null || mode.equals("Outline") || mode.equals("Both");
-        boolean depthTest = true;
+        boolean depthTest = enableDepthCheck.isToggled();
 
         if (currentWitherKey != null) {
             double x = currentWitherKey.getX();
