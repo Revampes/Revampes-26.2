@@ -1,11 +1,16 @@
 package xyz.whatsyouss.frosty.modules.impl.farming;
 
+import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
+
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.HoeItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.AxeItem;
+import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.phys.Vec3;
 import xyz.whatsyouss.frosty.events.impl.PreUpdateEvent;
 import xyz.whatsyouss.frosty.events.impl.Render3DEvent;
@@ -16,10 +21,6 @@ import xyz.whatsyouss.frosty.settings.impl.SelectSetting;
 import xyz.whatsyouss.frosty.settings.impl.SliderSetting;
 import xyz.whatsyouss.frosty.utility.RenderUtils;
 import xyz.whatsyouss.frosty.utility.Utils;
-
-import java.awt.Color;
-import java.util.ArrayList;
-import java.util.List;
 
 public class FarmingMacro extends Module {
 
@@ -36,7 +37,8 @@ public class FarmingMacro extends Module {
     private String[] FACES = new String[]{"North", "South", "East", "West"};
     private String[] CNFACES = new String[]{"北", "南", "东", "西"};
     private SliderSetting pitch, stopTime, triggerAmount;
-    private ButtonSetting rotateOnFinish, pestCleaner, rewarpOnly;
+    private ButtonSetting rotateOnFinish, pestCleaner, rewarpOnly, enableLoop, enableUngrab;
+    private ButtonSetting axeMode; // use an axe (melon/pumpkin) instead of a hoe
     private State state = State.IDLE;
     private int targetIndex = 1;
     private int lapCount = 0;
@@ -59,6 +61,11 @@ public class FarmingMacro extends Module {
 
     private boolean pendingResume = false;
     private int pendingResumeTick = 0;
+
+    // UngrabMouse deferred enable: only toggle it on after the macro has been running a short while.
+    private static final int UNGRAB_CONFIRM_TICKS = 20;
+    private boolean ungrabScheduled = false;
+    private int ungrabEnableTicks = 0;
     public FarmingMacro() {
         super("FarmingMacro", "农业宏", category.Farming);
 
@@ -69,6 +76,9 @@ public class FarmingMacro extends Module {
         this.registerSetting(pestCleaner = new ButtonSetting("Pest cleaner", "害虫清理", true));
         this.registerSetting(triggerAmount = new SliderSetting("Trigger amount", 4, 1, 8, 1, "触发数量"));
         this.registerSetting(rewarpOnly = new ButtonSetting("Rewarp only", "只在本轮结束清理", true));
+        this.registerSetting(enableLoop = new ButtonSetting("Enable Loop", false));
+        this.registerSetting(enableUngrab = new ButtonSetting("Enable Ungrab Mouse Automatically", true));
+        this.registerSetting(axeMode = new ButtonSetting("Pumpkin/Melon (Axe)", "切瓜/南瓜(斧)", false));
     }
 
     private static WorldDir yawToWorldDir(float yaw) {
@@ -108,6 +118,10 @@ public class FarmingMacro extends Module {
         }
         pestPaused = false;
         stopMacro();
+
+        if (enableUngrab.isToggled() && ModuleManager.ungrabMouse != null && ModuleManager.ungrabMouse.isEnabled()) {
+            ModuleManager.ungrabMouse.disable();
+        }
     }
 
     public void startMacro(int startIndex) {
@@ -117,9 +131,9 @@ public class FarmingMacro extends Module {
             return;
         }
 
-        hoeSlot = findHoeSlot();
+        hoeSlot = findToolSlot();
         if (hoeSlot == -1) {
-            Utils.addModuleMessage(this.getName(), "§cNo hoe found in hotbar");
+            Utils.addModuleMessage(this.getName(), "§cNo " + (axeMode.isToggled() ? "axe" : "hoe") + " found in hotbar");
             return;
         }
         mc.player.getInventory().setSelectedSlot(hoeSlot);
@@ -136,6 +150,8 @@ public class FarmingMacro extends Module {
         activeKey = null;
         awaitingGrab = true;
         pestCleanCompletedLap = false;
+        ungrabScheduled = enableUngrab.isToggled() && ModuleManager.ungrabMouse != null;
+        ungrabEnableTicks = 0;
 
         releaseAll();
         prepareMouseForMacroStart();
@@ -144,6 +160,8 @@ public class FarmingMacro extends Module {
             pauseForPestClean();
             return;
         }
+        // UngrabMouse is now enabled only after the macro is confirmed to be running (timed ticks below),
+        // so the player can keep fishing/farming without the cursor being freed too early.
     }
 
     public void stopMacro() {
@@ -154,7 +172,14 @@ public class FarmingMacro extends Module {
         preWarpTicks = 0;
         warpCooldown = 0;
         preWarpPos = null;
+        ungrabScheduled = false;
+        ungrabEnableTicks = 0;
         releaseAll();
+
+        if (enableUngrab.isToggled() && ModuleManager.ungrabMouse != null && ModuleManager.ungrabMouse.isEnabled()) {
+            ModuleManager.ungrabMouse.disable();
+            Utils.addModuleMessage(this.getName(), "§aUngrabMouse disabled");
+        }
     }
 
     @EventHandler
@@ -162,17 +187,32 @@ public class FarmingMacro extends Module {
         if (!Utils.nullCheck()) return;
 
         if (awaitingGrab) {
+            // If UngrabMouse is enabled, we should skip the grab check
+            if (enableUngrab.isToggled() && ModuleManager.ungrabMouse != null && ModuleManager.ungrabMouse.isEnabled()) {
+                awaitingGrab = false;
+                running = true;
+                beginTurning();
+                return;
+            }
+
             if (mc.mouseHandler.isMouseGrabbed()) {
                 awaitingGrab = false;
                 running = true;
                 beginTurning();
+                // Delay enabling UngrabMouse until the macro is confirmed running, then free the cursor.
+                if (ungrabScheduled) {
+                    ungrabEnableTicks = UNGRAB_CONFIRM_TICKS;
+                }
+                return;
             }
             return;
         }
         if (!running) {
             return;
         }
-        if (!mc.mouseHandler.isMouseGrabbed()) {
+        // Only auto-(re)grab the cursor when UngrabMouse is off. When UngrabMouse frees the cursor we
+        // keep farming via the synthetic keyAttack hold below instead of fighting the freed pointer.
+        if (!enableUngrab.isToggled() && !mc.mouseHandler.isMouseGrabbed()) {
             if (mc.gui.screen() == null) {
                 prepareMouseForMacroStart();
                 setKeyPressed(mc.options.keyAttack, true);
@@ -206,11 +246,23 @@ public class FarmingMacro extends Module {
             return;
         }
 
+        // Once the macro has been running for a short while, toggle UngrabMouse on (once per start).
+        if (ungrabScheduled) {
+            ungrabEnableTicks--;
+            if (ungrabEnableTicks <= 0) {
+                ungrabScheduled = false;
+                if (enableUngrab.isToggled() && ModuleManager.ungrabMouse != null && !ModuleManager.ungrabMouse.isEnabled()) {
+                    ModuleManager.ungrabMouse.enable();
+                    Utils.addModuleMessage(this.getName(), "§aUngrabMouse enabled");
+                }
+            }
+        }
+
         if (!mc.options.keyAttack.isDown()) {
             setKeyPressed(mc.options.keyAttack, true);
         }
 
-        int slot = findHoeSlot();
+        int slot = findToolSlot();
         if (slot != -1) {
             hoeSlot = slot;
             mc.player.getInventory().setSelectedSlot(hoeSlot);
@@ -399,6 +451,11 @@ public class FarmingMacro extends Module {
         if (rewarpOnly.isToggled()) {
             if (pestCleanCompletedLap) {
                 lapCount++;
+                if (!enableLoop.isToggled()) {
+                    stopMacro();
+                    Utils.addModuleMessage(this.getName(), "§aFarming completed after pest clean (loop disabled)");
+                    return;
+                }
             }
             targetIndex = 1;
         } else {
@@ -406,7 +463,7 @@ public class FarmingMacro extends Module {
         }
         pestCleanCompletedLap = false;
 
-        hoeSlot = findHoeSlot();
+        hoeSlot = findToolSlot();
         if (hoeSlot != -1) mc.player.getInventory().setSelectedSlot(hoeSlot);
 
         pendingResume = true;
@@ -449,6 +506,11 @@ public class FarmingMacro extends Module {
     }
 
     private void resumeAfterWarp() {
+        if (!enableLoop.isToggled()) {
+            stopMacro();
+            Utils.addModuleMessage(this.getName(), "§aFarming completed");
+            return;
+        }
         lapCount++;
         targetIndex = 1;
         dwellTicks = 0;
@@ -606,10 +668,15 @@ public class FarmingMacro extends Module {
         }
     }
 
-    private int findHoeSlot() {
+    private int findToolSlot() {
         Inventory inv = mc.player.getInventory();
+        boolean axe = axeMode != null && axeMode.isToggled();
         for (int i = 0; i < 9; i++) {
-            if (inv.getItem(i).getItem() instanceof HoeItem) return i;
+            if (axe) {
+                if (inv.getItem(i).getItem() instanceof AxeItem) return i;
+            } else {
+                if (inv.getItem(i).getItem() instanceof HoeItem) return i;
+            }
         }
         return -1;
     }

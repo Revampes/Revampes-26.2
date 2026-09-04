@@ -22,7 +22,7 @@ public class AutoSell extends Module {
     );
 
     private String[] types = new String[]{"Left", "Right", "Middle"};
-    private String[] CNtypes = new String[]{"左键", "右键", "中键"};
+//    private String[] CNtypes = new String[]{"左键", "右键", "中键"};
 
     private final SliderSetting clickIntervals = new SliderSetting("Click Intervals (ticks)", 5, 0, 40, 1);
     private final SelectSetting clickMethod = new SelectSetting("Click Method", 2, types);
