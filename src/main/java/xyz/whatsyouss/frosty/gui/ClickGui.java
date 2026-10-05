@@ -11,10 +11,12 @@ import net.minecraft.util.Mth;
 import xyz.whatsyouss.frosty.Frosty;
 import xyz.whatsyouss.frosty.gui.component.*;
 import xyz.whatsyouss.frosty.gui.component.impl.CategoryComponent;
+import xyz.whatsyouss.frosty.gui.component.impl.ColorComponent;
 import xyz.whatsyouss.frosty.gui.component.impl.InputComponent;
 import xyz.whatsyouss.frosty.gui.component.impl.KeyBindComponent;
 import xyz.whatsyouss.frosty.gui.component.impl.ModuleComponent;
 import xyz.whatsyouss.frosty.gui.component.impl.SelectComponent;
+import xyz.whatsyouss.frosty.hud.HudEditorScreen;
 import xyz.whatsyouss.frosty.modules.Module;
 import xyz.whatsyouss.frosty.modules.ModuleManager;
 import xyz.whatsyouss.frosty.modules.impl.client.UI;
@@ -28,6 +30,9 @@ import java.util.Map;
 import static xyz.whatsyouss.frosty.Frosty.mc;
 
 public class ClickGui extends Screen {
+    private static final int EDIT_HUD_WIDTH = 62;
+    private static final int EDIT_HUD_HEIGHT = 13;
+
     private static ClickGui instance;
     private float x, y, width, height;
     private boolean dragging;
@@ -132,6 +137,8 @@ public class ClickGui extends Screen {
 
         context.text(this.font, "Frosty 1.3.0", (int) ((x + width / 2) / scale), (int) ((y + 6) / scale), Color.WHITE.getRGB());
 
+        renderEditHudButton(context, mouseX, mouseY, isLight);
+
         for (CategoryComponent component : categoryComponents) {
             component.render(context, mouseX, mouseY, delta);
         }
@@ -153,7 +160,8 @@ public class ClickGui extends Screen {
                         if (settingComponent.isVisible()) {
                             if (currentY < y + height - 5 && currentY + settingComponent.getHeight() > y + 25) {
                                 settingComponent.updatePosition(x + 80, currentY);
-                                if (!(settingComponent instanceof SelectComponent && ((SelectComponent) settingComponent).isExpanded())) {
+                                if (!(settingComponent instanceof SelectComponent && ((SelectComponent) settingComponent).isExpanded())
+                                        && !(settingComponent instanceof ColorComponent && ((ColorComponent) settingComponent).isExpanded())) {
                                     settingComponent.render(context, mouseX, mouseY, delta);
                                 }
                             }
@@ -175,12 +183,16 @@ public class ClickGui extends Screen {
             if (component.isExpanded() && moduleY < y + height - 5 && moduleY + component.getTotalHeight() > y + 25) {
                 float currentY = moduleY + component.getHeight() + 5;
                 for (xyz.whatsyouss.frosty.gui.component.Component settingComponent : component.getSettingComponents()) {
-                    if (settingComponent.isVisible() && settingComponent instanceof SelectComponent && ((SelectComponent) settingComponent).isExpanded() &&
-                            currentY < y + height - 5 && currentY + settingComponent.getHeight() > y + 25) {
-                        settingComponent.updatePosition(x + 80, currentY);
-                        settingComponent.render(context, mouseX, mouseY, delta);
-                    }
                     if (settingComponent.isVisible()) {
+                        boolean expandedOverlay =
+                                (settingComponent instanceof SelectComponent && ((SelectComponent) settingComponent).isExpanded())
+                                        || (settingComponent instanceof ColorComponent && ((ColorComponent) settingComponent).isExpanded());
+
+                        if (expandedOverlay && currentY < y + height - 5 && currentY + settingComponent.getHeight() > y + 25) {
+                            settingComponent.updatePosition(x + 80, currentY);
+                            settingComponent.render(context, mouseX, mouseY, delta);
+                        }
+
                         currentY += settingComponent.getHeight() + 2;
                     }
                 }
@@ -201,11 +213,12 @@ public class ClickGui extends Screen {
                 int descHeight = wrappedText.size() * 10 + 10;
 
                 if (LiquidGlassStyle.isEnabled()) {
-                    LiquidGlassStyle.drawGlass(context, descX, descY, descWidth, descHeight, 6,
-                            isLight ? 0xD8678CFF : 0xD22A4A95);
+                    // Near-opaque elevated panel so the tooltip reads cleanly.
+                    LiquidGlassStyle.drawGlass(context, descX, descY, descWidth, descHeight, 7,
+                            isLight ? 0xEEF7FAFF : 0xE6181D23);
                 } else {
                     context.fill(descX, descY, descX + descWidth, descY + descHeight,
-                            isLight ? new Color(100, 100, 255).getRGB() : new Color(60, 60, 180).getRGB());
+                            isLight ? new Color(55, 62, 72).getRGB() : new Color(28, 33, 40).getRGB());
                 }
 
                 for (int i = 0; i < wrappedText.size(); i++) {
@@ -242,6 +255,12 @@ public class ClickGui extends Screen {
         float scale = 1.0f;
         mouseX *= scale;
         mouseY *= scale;
+
+        if (isEditHudButtonHovered(mouseX, mouseY) && button == 0) {
+            clearFocusedInput();
+            mc.gui.setScreen(new HudEditorScreen());
+            return true;
+        }
 
         if (mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + 20) {
             dragging = true;
@@ -280,6 +299,28 @@ public class ClickGui extends Screen {
                             }
                         }
                     }
+
+                    if (component.isVisible() && component instanceof ColorComponent colorComponent &&
+                            colorComponent.isExpanded() &&
+                            currentSettingY < renderBottom && currentSettingY + component.getHeight() > y + 25) {
+
+                        float pickerX = component.getX();
+                        float pickerWidth = component.getWidth();
+                        float pickerY = component.getY();
+                        float pickerBottom = pickerY + component.getHeight() + colorComponent.getPickerHeight();
+
+                        float clickTop = Math.max(pickerY, y + 25);
+                        float clickBottom = Math.min(pickerBottom, renderBottom);
+
+                        if (mouseX >= pickerX && mouseX <= pickerX + pickerWidth &&
+                                mouseY >= clickTop && mouseY <= clickBottom) {
+                            colorComponent.mouseClicked(mouseX, mouseY, button);
+                            if (colorComponent.isClickConsumed()) {
+                                return true;
+                            }
+                        }
+                    }
+
                     if (component.isVisible()) {
                         currentSettingY += component.getHeight() + 2;
                     }
@@ -486,5 +527,38 @@ public class ClickGui extends Screen {
 
     public List<ModuleComponent> getModuleComponents() {
         return moduleComponents;
+    }
+
+    private float editHudButtonX() {
+        return x + width - EDIT_HUD_WIDTH - 5;
+    }
+
+    private float editHudButtonY() {
+        return y + 4;
+    }
+
+    private boolean isEditHudButtonHovered(double mouseX, double mouseY) {
+        return mouseX >= editHudButtonX() && mouseX <= editHudButtonX() + EDIT_HUD_WIDTH
+                && mouseY >= editHudButtonY() && mouseY <= editHudButtonY() + EDIT_HUD_HEIGHT;
+    }
+
+    private void renderEditHudButton(GuiGraphicsExtractor context, int mouseX, int mouseY, boolean isLight) {
+        float buttonX = editHudButtonX();
+        float buttonY = editHudButtonY();
+        boolean hovered = isEditHudButtonHovered(mouseX, mouseY);
+
+        if (LiquidGlassStyle.isEnabled()) {
+            LiquidGlassStyle.drawControl(context, buttonX, buttonY, EDIT_HUD_WIDTH, EDIT_HUD_HEIGHT, hovered, hovered);
+        } else {
+            int background = isLight
+                    ? (hovered ? new Color(120, 120, 220).getRGB() : new Color(140, 140, 230).getRGB())
+                    : (hovered ? new Color(95, 95, 170).getRGB() : new Color(70, 70, 130).getRGB());
+            context.fill((int) buttonX, (int) buttonY, (int) (buttonX + EDIT_HUD_WIDTH),
+                    (int) (buttonY + EDIT_HUD_HEIGHT), background);
+        }
+
+        String label = "Edit HUD";
+        context.text(this.font, label, (int) (buttonX + (EDIT_HUD_WIDTH - this.font.width(label)) / 2.0f),
+                (int) (buttonY + (EDIT_HUD_HEIGHT - 8) / 2.0f), Color.WHITE.getRGB());
     }
 }

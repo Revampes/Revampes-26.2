@@ -17,9 +17,13 @@ import xyz.whatsyouss.frosty.config.ConfigManager;
 import xyz.whatsyouss.frosty.events.impl.PreUpdateEvent;
 import xyz.whatsyouss.frosty.events.impl.SettingUpdateEvent;
 import xyz.whatsyouss.frosty.gui.ClickGui;
+import xyz.whatsyouss.frosty.hud.HudManager;
+import xyz.whatsyouss.frosty.hud.HudRenderer;
+import xyz.whatsyouss.frosty.hud.impl.KuudraNotificationsWidget;
 import xyz.whatsyouss.frosty.modules.Module;
 import xyz.whatsyouss.frosty.modules.ModuleManager;
 import xyz.whatsyouss.frosty.utility.*;
+import xyz.whatsyouss.frosty.utility.kuudra.KuudraListener;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -75,6 +79,10 @@ public class Frosty implements ModInitializer {
 		EVENT_BUS.registerLambdaFactory("xyz.whatsyouss.frosty", (lookupInMethod, klass) -> (MethodHandles.Lookup) lookupInMethod.invoke(null, klass, MethodHandles.lookup()));
 		EVENT_BUS.subscribe(this);
 		EVENT_BUS.subscribe(new Rotations());
+		EVENT_BUS.subscribe(new KuudraListener());
+		EVENT_BUS.subscribe(new HudRenderer());
+		HudManager.register(new KuudraNotificationsWidget());
+		CroesusKeyMappings.register();
 		LocationUtils.init();
 		ConfigManager.createConfigDir();
 	}

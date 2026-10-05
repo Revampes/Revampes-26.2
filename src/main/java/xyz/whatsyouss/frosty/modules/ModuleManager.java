@@ -7,6 +7,7 @@ import xyz.whatsyouss.frosty.modules.impl.combat.Velocity;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.AutoGFS;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.KeyHighlight;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.MobHighlight;
+import xyz.whatsyouss.frosty.modules.impl.mining.commission.CommissionMacro;
 import xyz.whatsyouss.frosty.modules.impl.render.blockanimation.BlockAnimation;
 import xyz.whatsyouss.frosty.modules.impl.farming.*;
 import xyz.whatsyouss.frosty.modules.impl.fishing.AutoFish;
@@ -16,6 +17,24 @@ import xyz.whatsyouss.frosty.modules.impl.foraging.WoodNuker;
 import xyz.whatsyouss.frosty.modules.impl.fun.*;
 import xyz.whatsyouss.frosty.modules.impl.hunting.AutoReel;
 import xyz.whatsyouss.frosty.modules.impl.hunting.Hideonleaf;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.AutoRod;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.BuildWaypoints;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.CroesusHelper;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.DpsWaypoints;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.FireVeilOverlay;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.KuudraHealth;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.KuudraHitbox;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.KuudraPhaseAlert;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.KuudraProfit;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.NoPreAlert;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.PearlCancel;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.PearlWaypoints;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.PileWaypoints;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.PreSpotWaypoint;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.StunWaypoints;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.SupplyPickupAura;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.SupplySwap;
+import xyz.whatsyouss.frosty.modules.impl.kuudra.SupplyWaypoints;
 import xyz.whatsyouss.frosty.modules.impl.mining.*;
 import xyz.whatsyouss.frosty.modules.impl.movement.Eagle;
 import xyz.whatsyouss.frosty.modules.impl.movement.Fly;
@@ -84,6 +103,7 @@ public class ModuleManager {
     public static StarredMobESP starredMobESP;
 //    public static SecretAura secretAura;
     public static MithrilMacro mithrilMacro;
+    public static CommissionMacro commissionMacro;
     public static UngrabMouse ungrabMouse;
 //    public static CommissionMacro commissionMacro;
     public static FarmingMacro farmingMacro;
@@ -112,6 +132,25 @@ public class ModuleManager {
     public static BlockAnimation blockAnimation;
 
     public static AutoSell autoSell;
+
+    public static SupplySwap supplySwap;
+    public static SupplyPickupAura supplyPickupAura;
+    public static AutoRod autoRod;
+    public static SupplyWaypoints supplyWaypoints;
+    public static PileWaypoints pileWaypoints;
+    public static PearlWaypoints pearlWaypoints;
+    public static PearlCancel pearlCancel;
+    public static PreSpotWaypoint preSpotWaypoint;
+    public static StunWaypoints stunWaypoints;
+    public static DpsWaypoints dpsWaypoints;
+    public static BuildWaypoints buildWaypoints;
+    public static NoPreAlert noPreAlert;
+    public static CroesusHelper croesusHelper;
+    public static FireVeilOverlay fireVeilOverlay;
+    public static KuudraHealth kuudraHealth;
+    public static KuudraHitbox kuudraHitbox;
+    public static KuudraPhaseAlert kuudraPhaseAlert;
+    public static KuudraProfit kuudraProfit;
 
     public void register() {
         this.addModule(tps = new TPS());
@@ -190,6 +229,25 @@ public class ModuleManager {
         this.addModule(etherwarp = new Etherwarp());
         this.addModule(blockAnimation = new BlockAnimation());
         this.addModule(autoSell = new AutoSell());
+        this.addModule(supplySwap = new SupplySwap());
+        this.addModule(supplyPickupAura = new SupplyPickupAura());
+        this.addModule(autoRod = new AutoRod());
+        this.addModule(supplyWaypoints = new SupplyWaypoints());
+        this.addModule(pileWaypoints = new PileWaypoints());
+        this.addModule(pearlWaypoints = new PearlWaypoints());
+        this.addModule(pearlCancel = new PearlCancel());
+        this.addModule(preSpotWaypoint = new PreSpotWaypoint());
+        this.addModule(stunWaypoints = new StunWaypoints());
+        this.addModule(dpsWaypoints = new DpsWaypoints());
+        this.addModule(buildWaypoints = new BuildWaypoints());
+        this.addModule(noPreAlert = new NoPreAlert());
+        this.addModule(croesusHelper = new CroesusHelper());
+        this.addModule(fireVeilOverlay = new FireVeilOverlay());
+        this.addModule(kuudraHealth = new KuudraHealth());
+        this.addModule(kuudraHitbox = new KuudraHitbox());
+        this.addModule(kuudraPhaseAlert = new KuudraPhaseAlert());
+        this.addModule(kuudraProfit = new KuudraProfit());
+        this.addModule(commissionMacro = new CommissionMacro());
         modules.sort(Comparator.comparing(Module::getName));
     }
 

@@ -30,6 +30,7 @@ public class Module {
     public boolean hidden = false;
     public boolean closetModule = false;
     public boolean alwaysOn = false;
+    public boolean defaultEnabled = false;
     public String lastInfo;
     public static boolean sort;
     public static List<String> categoriesString = new ArrayList<>();
@@ -269,6 +270,6 @@ public class Module {
     }
 
     public static enum category {
-        Combat, Movement, Render, Other, Client, Fishing, Foraging, Hunting, Mining, Farming, Fun, Dungeon
+        Combat, Movement, Render, Other, Client, Fishing, Foraging, Hunting, Mining, Farming, Fun, Dungeon, Kuudra
     }
 }

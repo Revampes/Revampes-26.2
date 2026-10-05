@@ -642,4 +642,55 @@ public class RenderUtils {
 
         matrix.popPose();
     }
+
+    /**
+     * Draws billboarded world text at an explicit fixed scale (used by the Kuudra
+     * waypoint modules, matching IQAddons' WorldRenderUtils.drawText scale semantics).
+     */
+    public static void drawText3D(PoseStack matrix, String text, double x, double y, double z, Color color, float scale) {
+        Vec3 cam = mc.getEntityRenderDispatcher().camera.position();
+        float relX = (float) (x - cam.x);
+        float relY = (float) (y - cam.y);
+        float relZ = (float) (z - cam.z);
+
+        matrix.pushPose();
+        matrix.translate(relX, relY, relZ);
+
+        Vector3f toCam = new Vector3f(-relX, -relY, -relZ);
+        if (toCam.lengthSquared() < 1e-6f) toCam.set(0, 0, 1);
+        toCam.normalize();
+
+        float yaw = mc.getEntityRenderDispatcher().camera.yRot();
+        float wrappedYaw = (yaw % 360 + 360) % 360;
+
+        boolean isNorthSouth = (wrappedYaw >= 135 && wrappedYaw <= 225) || (wrappedYaw <= 45 || wrappedYaw >= 315);
+        Vector3f toCamByYaw = isNorthSouth ? toCam.negate() : toCam;
+
+        Quaternionf billboardQuat = new Quaternionf().lookAlong(toCamByYaw, new Vector3f(0, 1, 0));
+
+        matrix.mulPose(billboardQuat);
+        matrix.scale(scale, -scale, scale);
+
+        int packedColor = color.getRGB() | (color.getAlpha() << 24);
+        Font font = mc.font;
+        int textWidth = font.width(text);
+        Font.PreparedText prepared = font.prepareText(text, -textWidth / 2f, 0f, packedColor, false, 0);
+
+        Matrix4f glyphMatrix = matrix.last().pose();
+
+        BufferSource bs = new BufferSource();
+        Font.DisplayMode displayMode = Font.DisplayMode.SEE_THROUGH;
+
+        prepared.visit(new Font.GlyphVisitor() {
+            @Override
+            public void acceptRenderable(TextRenderable renderable) {
+                VertexConsumer builder = bs.getBuffer(renderable.renderType(displayMode));
+                renderable.render(glyphMatrix, builder, 15728880, false);
+            }
+        });
+
+        bs.uploadAndDraw();
+
+        matrix.popPose();
+    }
 }

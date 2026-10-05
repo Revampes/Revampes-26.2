@@ -9,11 +9,13 @@ import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.world.entity.Avatar;
+import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import xyz.whatsyouss.frosty.modules.impl.render.PlayerESP;
+import xyz.whatsyouss.frosty.modules.impl.render.blockanimation.BlockAnimation;
 import xyz.whatsyouss.frosty.utility.Rotations;
 
 import static xyz.whatsyouss.frosty.Frosty.mc;
@@ -32,5 +34,16 @@ public abstract class AvatarRendererMixin extends LivingEntityRenderer<Avatar, A
             state.bodyRot = Rotations.serverYaw;
             state.xRot = Rotations.serverPitch;
         }
+    }
+
+    /**
+     * Third person / second person (third person front) half of the 1.8.9 block animation: this is the
+     * modern equivalent of 1.8.9's {@code RenderPlayer#setModelVisibilities} setting
+     * {@code ModelBiped.heldItemRight = 3} while a blocking item was in use.
+     */
+    @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V", at = @At("RETURN"))
+    private void extractRenderState$blockAnimation(Avatar entity, AvatarRenderState state, float partialTicks, CallbackInfo ci) {
+        if (!(entity instanceof Player player)) return;
+        BlockAnimation.applyThirdPersonBlockPose(state, player);
     }
 }

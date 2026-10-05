@@ -56,8 +56,21 @@ public enum RenderLayers
                     RenderSetup.builder(ShaderPipelines.ESP_QUADS_NO_CULLING)
                             .sortOnUpload().useLightmap().createRenderSetup());
 
-    private static final Function<Identifier, RenderType> ENTITY_TRANSLUCENT_NO_DEPTH =
-            Util.memoize(texture -> RenderType.create("frosty:entity_translucent_no_depth",
+    /**
+     * Unordered triangle list with culling disabled, mirroring IQAddons' circle fill layers.
+     */
+    public static final RenderType TRIANGLES = RenderType.create("frosty:triangles",
+            RenderSetup.builder(ShaderPipelines.WORLD_TRIANGLES)
+                    .sortOnUpload().createRenderSetup());
+
+    /**
+     * Same as {@link #TRIANGLES}, but with no depth test.
+     */
+    public static final RenderType ESP_TRIANGLES = RenderType.create("frosty:esp_triangles",
+            RenderSetup.builder(ShaderPipelines.ESP_WORLD_TRIANGLES)
+                    .sortOnUpload().createRenderSetup());
+
+    private static final Function<Identifier, RenderType> ENTITY_TRANSLUCENT_NO_DEPTH =            Util.memoize(texture -> RenderType.create("frosty:entity_translucent_no_depth",
                     RenderSetup.builder(ShaderPipelines.ENTITY_TRANSLUCENT_NO_DEPTH)
                             .withTexture("Sampler0", texture)
                             .useLightmap()
@@ -81,6 +94,15 @@ public enum RenderLayers
     public static RenderType getLines(boolean depthTest)
     {
         return depthTest ? LINES : ESP_LINES;
+    }
+
+    /**
+     * Returns either {@link #TRIANGLES} or {@link #ESP_TRIANGLES} depending on the
+     * value of {@code depthTest}.
+     */
+    public static RenderType getTriangles(boolean depthTest)
+    {
+        return depthTest ? TRIANGLES : ESP_TRIANGLES;
     }
 
     public static RenderType entityTranslucentNoDepth(Identifier texture)

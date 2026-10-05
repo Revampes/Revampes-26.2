@@ -113,4 +113,11 @@ public class LocationUtils {
 
         return false;
     }
+
+//    public static boolean isInKuudra() {
+//        if (mc.getConnection() == null) return false;
+//
+//        String area = getCurrentArea();
+//        return area != null && area.contains("kuudra");
+//    }
 }

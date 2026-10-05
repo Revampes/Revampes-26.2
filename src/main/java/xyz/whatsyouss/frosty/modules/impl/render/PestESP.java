@@ -29,7 +29,8 @@ public class PestESP extends Module {
         if (!sidebar.contains("the garde") && !sidebar.contains("plot")) {
             return;
         }
-        if (!sidebar.contains("ൠ")) {
+        //EWW! 2  Pest have spawned in Plot - 19!
+        if (!sidebar.contains("\uE07F")) {
             return;
         }
         for (Entity entity : mc.level.entitiesForRendering()) {

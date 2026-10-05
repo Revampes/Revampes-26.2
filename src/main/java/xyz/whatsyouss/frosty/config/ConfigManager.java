@@ -219,6 +219,8 @@ public class ConfigManager {
                         settingsObject.addProperty(setting.getName(), ((ButtonSetting) setting).isToggled());
                     } else if (setting instanceof InputSetting) {
                         settingsObject.addProperty(setting.getName(), ((InputSetting) setting).getValue());
+                    } else if (setting instanceof ColorSetting) {
+                        settingsObject.addProperty(setting.getName(), ((ColorSetting) setting).getHex());
                     }
                 }
                 moduleObject.add("settings", settingsObject);
@@ -233,13 +235,17 @@ public class ConfigManager {
     public static void loadConfig() {
         if (!Files.exists(DEFAULT_CONFIG)) {
             firstDefaultConfigMissing = true;
+            enableDefaultModules();
             return;
         }
         try (Reader reader = Files.newBufferedReader(DEFAULT_CONFIG)) {
             JsonObject config = gson.fromJson(reader, JsonObject.class);
             if (config == null) return;
             for (Module module : ModuleManager.getModules()) {
-                if (!config.has(module.getName())) continue;
+                if (!config.has(module.getName())) {
+                    if (module.defaultEnabled && !module.isEnabled()) module.enable();
+                    continue;
+                }
                 JsonObject moduleObject = config.getAsJsonObject(module.getName());
                 if (moduleObject.get("enabled").getAsBoolean() && !module.isEnabled()) {
                     module.enable();
@@ -273,6 +279,8 @@ public class ConfigManager {
                         ((ButtonSetting) setting).setEnabled(settingsObject.get(setting.getName()).getAsBoolean());
                     } else if (setting instanceof InputSetting) {
                         ((InputSetting) setting).setValue(settingsObject.get(setting.getName()).getAsString());
+                    } else if (setting instanceof ColorSetting) {
+                        ((ColorSetting) setting).setHex(settingsObject.get(setting.getName()).getAsString());
                     }
                 }
             }
@@ -288,5 +296,17 @@ public class ConfigManager {
     public static void completeLanguagePrompt() {
         languagePromptCompleted = true;
         firstDefaultConfigMissing = false;
+    }
+
+    /**
+     * Applies the modules whose IQAddons counterpart ships enabled, for a module that has
+     * no saved entry yet (fresh install or a newly added module).
+     */
+    private static void enableDefaultModules() {
+        for (Module module : ModuleManager.getModules()) {
+            if (module.defaultEnabled && !module.isEnabled()) {
+                module.enable();
+            }
+        }
     }
 }

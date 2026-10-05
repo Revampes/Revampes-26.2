@@ -36,6 +36,10 @@ public class FarmingMacro extends Module {
     private SelectSetting face;
     private String[] FACES = new String[]{"North", "South", "East", "West"};
     private String[] CNFACES = new String[]{"北", "南", "东", "西"};
+    private ButtonSetting caneMode; // diagonal movement for sugar cane / sunflower / rose etc.
+    private SelectSetting diagonalFace;
+    private String[] DIAG_FACES = new String[]{"NE", "NW", "SE", "SW"};
+    private String[] CN_DIAG_FACES = new String[]{"东北", "西北", "东南", "西南"};
     private SliderSetting pitch, stopTime, triggerAmount;
     private ButtonSetting rotateOnFinish, pestCleaner, rewarpOnly, enableLoop, enableUngrab;
     private ButtonSetting axeMode; // use an axe (melon/pumpkin) instead of a hoe
@@ -53,7 +57,7 @@ public class FarmingMacro extends Module {
     private int pestResumePt = 1;
     private boolean pestCleanCompletedLap = false;
 
-    private KeyMapping activeKey = null;
+    private final List<KeyMapping> activeKeys = new ArrayList<>();
     private int hoeSlot = -1;
     public boolean running = false;
 
@@ -69,7 +73,9 @@ public class FarmingMacro extends Module {
     public FarmingMacro() {
         super("FarmingMacro", "农业宏", category.Farming);
 
+        this.registerSetting(caneMode = new ButtonSetting("Cane Mode", "对角线模式", false));
         this.registerSetting(face = new SelectSetting("Face", "朝向", 0, FACES, CNFACES));
+        this.registerSetting(diagonalFace = new SelectSetting("Diagonal Face", "对角线朝向", 0, DIAG_FACES, CN_DIAG_FACES));
         this.registerSetting(pitch = new SliderSetting("Pitch", 0, -90, 90, 1, "俯仰角"));
         this.registerSetting(stopTime = new SliderSetting("Stop time", 500, 100, 6000, 50, "刹车时长"));
         this.registerSetting(rotateOnFinish = new ButtonSetting("Rotate on finish", "结束后反向", false));
@@ -81,18 +87,12 @@ public class FarmingMacro extends Module {
         this.registerSetting(axeMode = new ButtonSetting("Pumpkin/Melon (Axe)", "切瓜/南瓜(斧)", false));
     }
 
-    private static WorldDir yawToWorldDir(float yaw) {
-        float y = Mth.wrapDegrees(yaw);
-        if (y >= -45f && y < 45f) return WorldDir.SOUTH;
-        if (y >= 45f && y < 135f) return WorldDir.WEST;
-        if (y >= 135f || y < -135f) return WorldDir.NORTH;
-        return WorldDir.EAST;
-    }
-
     @Override
     public void guiUpdate() {
         this.triggerAmount.setVisibilityCondition(() -> pestCleaner.isToggled());
         this.rewarpOnly.setVisibilityCondition(() -> pestCleaner.isToggled());
+        this.face.setVisibilityCondition(() -> !caneMode.isToggled());
+        this.diagonalFace.setVisibilityCondition(() -> caneMode.isToggled());
     }
 
     public List<double[]> getWaypoints() {
@@ -147,7 +147,7 @@ public class FarmingMacro extends Module {
         warpCooldown = 0;
         warpTimeout = 0;
         preWarpPos = null;
-        activeKey = null;
+        activeKeys.clear();
         awaitingGrab = true;
         pestCleanCompletedLap = false;
         ungrabScheduled = enableUngrab.isToggled() && ModuleManager.ungrabMouse != null;
@@ -167,7 +167,7 @@ public class FarmingMacro extends Module {
     public void stopMacro() {
         running = false;
         state = State.IDLE;
-        activeKey = null;
+        activeKeys.clear();
         dwellTicks = 0;
         preWarpTicks = 0;
         warpCooldown = 0;
@@ -310,8 +310,8 @@ public class FarmingMacro extends Module {
         double[] from = waypoints.get(targetIndex - 1);
         double[] to = waypoints.get(targetIndex);
 
-        KeyMapping test = moveKeyFor(from, to);
-        if (test == null) {
+        List<KeyMapping> keys = resolveKeys(from, to);
+        if (keys.isEmpty()) {
             Utils.addModuleMessage(this.getName(), "§eWaypoints #" + targetIndex
                     + " identical; skipping.");
             targetIndex++;
@@ -319,7 +319,8 @@ public class FarmingMacro extends Module {
             return;
         }
 
-        activeKey = null;
+        activeKeys.clear();
+        activeKeys.addAll(keys);
         state = State.MOVING;
     }
 
@@ -345,11 +346,11 @@ public class FarmingMacro extends Module {
         }
 
         double[] from = waypoints.get(targetIndex - 1);
-        KeyMapping current = moveKeyFor(from, target);
-        if (current == null) {
+        List<KeyMapping> keys = resolveKeys(from, target);
+        if (keys.isEmpty()) {
             releaseKeys();
         } else {
-            pressOnly(current);
+            pressKeys(keys);
         }
     }
 
@@ -357,10 +358,9 @@ public class FarmingMacro extends Module {
         if (targetIndex - 1 >= 0 && targetIndex < waypoints.size()) {
             double[] from = waypoints.get(targetIndex - 1);
             double[] to = waypoints.get(targetIndex);
-            KeyMapping cur = moveKeyFor(from, to);
-            if (cur != null) setKeyPressed(cur, true);
-        } else if (activeKey != null) {
-            setKeyPressed(activeKey, true);
+            pressKeys(resolveKeys(from, to));
+        } else if (!activeKeys.isEmpty()) {
+            pressKeys(activeKeys);
         }
 
         dwellTicks++;
@@ -518,7 +518,7 @@ public class FarmingMacro extends Module {
         warpCooldown = 0;
         warpTimeout = 0;
         preWarpPos = null;
-        activeKey = null;
+        activeKeys.clear();
         beginTurning();
     }
 
@@ -540,58 +540,204 @@ public class FarmingMacro extends Module {
         mc.player.setXRot(cp + (targetPitch - cp) * 0.15f);
     }
 
-    private float faceYaw() {
-        int faceIdx = (int) face.getValue();
-        if (rotateOnFinish.isToggled() && (lapCount % 2 == 1)) {
-            faceIdx = oppositeCardinalIdx(faceIdx);
+    // ---- movement resolution: two independent modes ----
+    // normal (axial) and cane(diagonal) each use their own key logic and never
+    // bleed into the other. faceYaw() already selects the world direction; here
+    // we just route to the correct mode's key calculation.
+
+    private List<KeyMapping> resolveKeys(double[] from, double[] to) {
+        float yaw = faceYaw();
+        if (caneMode != null && caneMode.isToggled()) {
+            return computeKeys(from, to, yaw); // cane/diagonal logic below
         }
-        return switch (faceIdx) {
-            case 0 -> 180f;
-            case 1 -> 0f;
-            case 2 -> -90f;
-            case 3 -> 90f;
-            default -> 0f;
-        };
+        return normalKeys(from, to, yaw);
     }
 
-    private int oppositeCardinalIdx(int idx) {
-        return switch (idx) {
-            case 0 -> 1;
-            case 1 -> 0;
-            case 2 -> 3;
-            case 3 -> 2;
-            default -> idx;
-        };
-    }
-
-    private KeyMapping moveKeyFor(double[] from, double[] to) {
+    /**
+     * Original axial movement: the travel is treated purely against the current
+     * cardinal facing (N/E/S/W). The dominant axis of the leg decides the needed
+     * direction; the correct single key is derived from where that direction sits
+     * relative to where the player looks.
+     */
+    private List<KeyMapping> normalKeys(double[] from, double[] to, float yaw) {
         double dx = to[0] - from[0];
         double dz = to[2] - from[2];
 
-        WorldDir needed;
-        if (Math.abs(dx) >= Math.abs(dz)) {
-            if (Math.abs(dx) < 0.1) return null;
-            needed = dx > 0 ? WorldDir.EAST : WorldDir.WEST;
+        boolean horizontal = Math.abs(dx) >= Math.abs(dz);
+        int need;
+        if (horizontal) {
+            if (Math.abs(dx) < 0.1) return List.of();
+            need = dx > 0 ? CARD_EAST : CARD_WEST;
         } else {
-            if (Math.abs(dz) < 0.1) return null;
-            needed = dz > 0 ? WorldDir.SOUTH : WorldDir.NORTH;
+            if (Math.abs(dz) < 0.1) return List.of();
+            need = dz > 0 ? CARD_SOUTH : CARD_NORTH;
         }
 
-        WorldDir forward = yawToWorldDir(faceYaw());
+        int view = axialView(yaw);
+        KeyMapping k = cardinalKey(view, need);
+        return k == null ? List.of() : List.of(k);
+    }
 
-        if (needed == forward) return mc.options.keyUp;
-        if (needed == forward.opposite()) return mc.options.keyDown;
-        if (needed == forward.clockwise()) return mc.options.keyRight;
-        if (needed == forward.counterClockwise()) return mc.options.keyLeft;
+    // yaw -> the cardinal index that matches the original Face selector:
+    // Face idx 0=North(yaw180), 1=South(yaw0), 2=East(yaw-90), 3=West(yaw90).
+    private int axialView(float yaw) {
+        float y = Mth.wrapDegrees(yaw);
+        if (Math.abs(y) < 45f) return CARD_SOUTH;      // yaw ~0
+        if (y >= 45f && y < 135f) return CARD_WEST;    // yaw ~90
+        if (y >= 135f || y < -135f) return CARD_NORTH; // yaw ~180
+        return CARD_EAST;                              // yaw ~-90
+    }
 
+    private KeyMapping cardinalKey(int view, int need) {
+        if (view == need) return mc.options.keyUp;     // forward
+        if (need == opposite(view)) return mc.options.keyDown;   // back
+        if (need == clockwiseFrom(view)) return mc.options.keyRight; // right
+        if (need == counterClockwiseFrom(view)) return mc.options.keyLeft; // left
         return null;
     }
 
-    private void pressOnly(KeyMapping key) {
-        setKeyPressed(mc.options.keyUp, key == mc.options.keyUp);
-        setKeyPressed(mc.options.keyDown, key == mc.options.keyDown);
-        setKeyPressed(mc.options.keyLeft, key == mc.options.keyLeft);
-        setKeyPressed(mc.options.keyRight, key == mc.options.keyRight);
+    private float faceYaw() {
+        float yaw;
+        if (caneMode != null && caneMode.isToggled()) {
+            yaw = switch ((int) diagonalFace.getValue()) {
+                case 0 -> -135f; // NE
+                case 1 -> 135f;  // NW
+                case 2 -> -45f;  // SE
+                case 3 -> 45f;   // SW
+                default -> -135f;
+            };
+        } else {
+            yaw = switch ((int) face.getValue()) {
+                case 0 -> 180f;
+                case 1 -> 0f;
+                case 2 -> -90f;
+                case 3 -> 90f;
+                default -> 0f;
+            };
+        }
+        if (rotateOnFinish.isToggled() && (lapCount % 2 == 1)) {
+            yaw = Mth.wrapDegrees(yaw + 180f);
+        }
+        return yaw;
+    }
+
+    private List<KeyMapping> computeKeys(double[] from, double[] to, float yaw) {
+        double dx = to[0] - from[0];
+        double dz = to[2] - from[2];
+        double len = Math.sqrt(dx * dx + dz * dz);
+        if (len < 1e-4) {
+            return List.of();
+        }
+        double ndx = dx / len;
+        double ndz = dz / len;
+
+        // Diagonal (canes) mode: straight N-S / E-W legs get a single strafe key
+        // matched to the wall layout. Axial mode must keep the original cardinal
+        // N/E/S/W movement, so this special-casing is only turned on for caneMode.
+        boolean nsRow = Math.abs(dx) < 0.6;
+        boolean ewRow = Math.abs(dz) < 0.6;
+        boolean cane = caneMode != null && caneMode.isToggled();
+        if (cane && (nsRow || ewRow)) {
+            if (nsRow) {
+                // N-S rows: going South is always "S". Going North is strafed —
+                // toward the player's right for west-facing looks (NW/SW -> D),
+                // toward the left for east-facing looks (NE/SE -> A).
+                if (dz > 0) return List.of(mc.options.keyDown);
+                return List.of(Mth.wrapDegrees(yaw) >= 0
+                        ? mc.options.keyRight
+                        : mc.options.keyLeft);
+            }
+            int row = dx > 0 ? CARD_EAST : CARD_WEST;
+            KeyMapping single = singleAxisKey(row, yaw);
+            return single == null ? List.of() : List.of(single);
+        }
+
+        // True diagonal row: geometric two-key combination.
+        double yawRad = Math.toRadians(Mth.wrapDegrees(yaw));
+        // Minecraft: forward (-sin, 0, cos), right (cos, 0, sin)
+        double fwX = -Math.sin(yawRad);
+        double fwZ = Math.cos(yawRad);
+        double rtX = Math.cos(yawRad);
+        double rtZ = Math.sin(yawRad);
+
+        double fwdDot = ndx * fwX + ndz * fwZ;
+        double rgtDot = ndx * rtX + ndz * rtZ;
+
+        List<KeyMapping> keys = new ArrayList<>();
+        double threshold = 0.1;
+        if (fwdDot > threshold) keys.add(mc.options.keyUp);
+        else if (fwdDot < -threshold) keys.add(mc.options.keyDown);
+        if (rgtDot > threshold) keys.add(mc.options.keyRight);
+        else if (rgtDot < -threshold) keys.add(mc.options.keyLeft);
+        return keys;
+    }
+
+    // Cardinal axis codes used by singleAxisKey / relativeAxisKey.
+    private static final int CARD_NORTH = 0;
+    private static final int CARD_EAST = 1;
+    private static final int CARD_SOUTH = 2;
+    private static final int CARD_WEST = 3;
+
+    private static final float[] AXIS_YAW = {180f, -90f, 0f, 90f}; // N, E, S, W
+
+    /**
+     * Reduce a straight N-S / E-W segment to a single cardinal key.
+     * The chosen diagonal faces sit exactly on 45° bisectors, i.e. always an
+     * even split between two neighbouring cardinal axes. We pick the axis whose
+     * pressed "right" strafe key drives along {@code row}, so the macro moves
+     * straight down the row with one key (D in the described cane setup) instead
+     * of producing a W+A combo.
+     */
+    private KeyMapping singleAxisKey(int row, float yaw) {
+        float best = Float.MAX_VALUE;
+        int bestA = -1;
+        int bestB = -1;
+        for (int i = 0; i < AXIS_YAW.length; i++) {
+            float d = Math.abs(Mth.wrapDegrees(yaw - AXIS_YAW[i]));
+            if (d < best - 1e-6f) {
+                best = d;
+                bestA = i;
+                bestB = -1;
+            } else if (Math.abs(d - best) < 1e-6f && i != bestA) {
+                bestB = i;
+            }
+        }
+        int view = bestA;
+        if (bestB != -1) {
+            // On a 45° tie prefer the neighbour that puts the row on our right
+            // (pressing D), then the neighbour that walks the row straight-ahead.
+            view = clockwiseFrom(bestA) == row ? bestA
+                    : clockwiseFrom(bestB) == row ? bestB
+                    : bestA;
+        }
+        return relativeAxisKey(view, row);
+    }
+
+    private KeyMapping relativeAxisKey(int view, int row) {
+        if (view == row) return mc.options.keyUp;             // forward
+        if (row == opposite(view)) return mc.options.keyDown; // backward
+        if (row == clockwiseFrom(view)) return mc.options.keyRight; // D
+        if (row == counterClockwiseFrom(view)) return mc.options.keyLeft;  // A
+        return null;
+    }
+
+    private int opposite(int axis) {
+        return (axis + 2) & 3;
+    }
+
+    private int clockwiseFrom(int axis) {
+        return (axis + 1) & 3; // N->E, E->S, S->W, W->N
+    }
+
+    private int counterClockwiseFrom(int axis) {
+        return (axis + 3) & 3; // N->W, E->N, S->E, W->S
+    }
+
+    private void pressKeys(List<KeyMapping> keys) {
+        releaseKeys();
+        for (KeyMapping key : keys) {
+            setKeyPressed(key, true);
+        }
     }
 
     private void releaseKeys() {
@@ -687,31 +833,5 @@ public class FarmingMacro extends Module {
 
     private enum State {
         IDLE, TURNING, MOVING, DWELLING, PRE_WARP, WARPING
-    }
-
-    private enum WorldDir {
-        NORTH, SOUTH, EAST, WEST;
-
-        WorldDir opposite() {
-            return switch (this) {
-                case NORTH -> SOUTH;
-                case SOUTH -> NORTH;
-                case EAST -> WEST;
-                case WEST -> EAST;
-            };
-        }
-
-        WorldDir clockwise() {
-            return switch (this) {
-                case NORTH -> EAST;
-                case EAST -> SOUTH;
-                case SOUTH -> WEST;
-                case WEST -> NORTH;
-            };
-        }
-
-        WorldDir counterClockwise() {
-            return clockwise().opposite();
-        }
     }
 }

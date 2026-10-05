@@ -53,6 +53,10 @@ public class ModuleComponent extends Component {
                 settingComponents.add(new InputComponent((xyz.whatsyouss.frosty.settings.impl.InputSetting) setting,
                         x + 5, settingY, width - 10, height - 5));
                 settingY += height - 5 + 2;
+            } else if (setting instanceof xyz.whatsyouss.frosty.settings.impl.ColorSetting) {
+                settingComponents.add(new ColorComponent((xyz.whatsyouss.frosty.settings.impl.ColorSetting) setting,
+                        x + 5, settingY, width - 10, height - 5));
+                settingY += height - 5 + 2;
             }
         }
     }
@@ -182,6 +186,9 @@ public class ModuleComponent extends Component {
                 if (component instanceof SelectComponent && ((SelectComponent) component).isExpanded()) {
                     componentHeight += ((SelectComponent) component).getOptionsLength() * component.getHeight();
                 }
+                if (component instanceof ColorComponent && ((ColorComponent) component).isExpanded()) {
+                    componentHeight += ((ColorComponent) component).getPickerHeight();
+                }
                 currentY += componentHeight + 2;
             }
         }
@@ -205,6 +212,8 @@ public class ModuleComponent extends Component {
             for (Component component : settingComponents) {
                 if (component instanceof SliderComponent) {
                     ((SliderComponent) component).mouseReleased(mouseX, mouseY, button);
+                } else if (component instanceof ColorComponent) {
+                    ((ColorComponent) component).mouseReleased();
                 }
             }
         }
@@ -215,6 +224,8 @@ public class ModuleComponent extends Component {
             for (Component component : settingComponents) {
                 if (component instanceof SliderComponent) {
                     ((SliderComponent) component).mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+                } else if (component instanceof ColorComponent) {
+                    ((ColorComponent) component).mouseDragged(mouseX, mouseY, button);
                 }
             }
         }

@@ -71,6 +71,32 @@ public enum ShaderPipelines {
                     .withLocation(Identifier.parse("frosty:pipeline/esp_quads"))
                     .withDepthStencilState(Optional.empty()).withCull(false).build());
 
+    /**
+     * Camera facing geometry written as an unordered triangle list, mirroring IQAddons'
+     * {@code circleFilled*} pipelines (POSITION_COLOR, culling off).
+     */
+    public static final Snippet WORLD_TRIANGLES_SNIPPET = RenderPipeline
+            .builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
+            .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
+            .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withVertexShader("core/position_color")
+            .withFragmentShader("core/position_color")
+            .withCull(false)
+            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+            .buildSnippet();
+
+    public static final RenderPipeline WORLD_TRIANGLES = RenderPipelines.register(
+            RenderPipeline.builder(WORLD_TRIANGLES_SNIPPET)
+                    .withLocation(Identifier.parse("frosty:pipeline/world_triangles"))
+                    .withDepthStencilState(DepthStencilState.DEFAULT)
+                    .build());
+
+    public static final RenderPipeline ESP_WORLD_TRIANGLES = RenderPipelines.register(
+            RenderPipeline.builder(WORLD_TRIANGLES_SNIPPET)
+                    .withLocation(Identifier.parse("frosty:pipeline/esp_world_triangles"))
+                    .withDepthStencilState(Optional.empty())
+                    .build());
+
     public static final RenderPipeline ENTITY_TRANSLUCENT_NO_DEPTH = RenderPipelines
             .register(copyWithoutDepth(RenderPipelines.ENTITY_TRANSLUCENT,
                     Identifier.parse("frosty:pipeline/entity_translucent_no_depth")));

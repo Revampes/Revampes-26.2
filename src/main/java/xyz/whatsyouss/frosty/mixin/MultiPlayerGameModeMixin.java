@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import xyz.whatsyouss.frosty.Frosty;
 import xyz.whatsyouss.frosty.events.impl.BreakBlockEvent;
+import xyz.whatsyouss.frosty.events.impl.ItemUseEvent;
 import xyz.whatsyouss.frosty.events.impl.StartBreakingBlockEvent;
 import xyz.whatsyouss.frosty.modules.ModuleManager;
 import xyz.whatsyouss.frosty.utility.Utils;
@@ -27,8 +28,22 @@ import static xyz.whatsyouss.frosty.Frosty.mc;
 @Mixin(MultiPlayerGameMode.class)
 public abstract class MultiPlayerGameModeMixin {
 
+    @Inject(method = "useItem", at = @At("HEAD"), cancellable = true)
+    private void onUseItem(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (Frosty.EVENT_BUS.post(new ItemUseEvent(hand, stack.copy())).isCancelled()) {
+            cir.cancel();
+        }
+    }
+
     @Inject(method = "useItemOn", at = @At("HEAD"), cancellable = true)
     private void onInteractBlock(LocalPlayer player, InteractionHand hand, BlockHitResult hitResult, CallbackInfoReturnable<InteractionResult> cir) {
+        ItemStack useStack = player.getActiveItem();
+        if (Frosty.EVENT_BUS.post(new ItemUseEvent(hand, useStack.copy())).isCancelled()) {
+            cir.cancel();
+            return;
+        }
+
         if (!Utils.nullCheck() || !ModuleManager.stopPlacement.isEnabled()) {
             return;
         }

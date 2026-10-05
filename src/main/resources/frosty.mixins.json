@@ -4,6 +4,8 @@
   "compatibilityLevel": "JAVA_25",
   "refmap": "frosty.mixins.refmap.json",
   "mixins": [
+    "AbstractContainerScreenMixin",
+    "ArmorStandRendererMixin",
     "AvatarRendererMixin",
     "BossHealthOverlayMixin",
     "CameraMixin",
@@ -24,6 +26,7 @@
     "HudMixin",
     "HumanoidArmorLayerMixin",
     "IChatComponentMixin",
+    "ItemInHandRendererMixin",
     "ItemModelResolverMixin",
     "KeyboardHandlerMixin",
     "KeyboardInputMixin",
@@ -51,6 +54,7 @@
     "VisGraphMixin",
     "accessor.AbstractContainerScreenAccessor",
     "accessor.ClientboundSetEntityMotionPacketAccessor",
+    "accessor.ItemInHandRendererAccessor",
     "accessor.KeyMappingAccessor",
     "accessor.MinecraftAccessor"
   ],
