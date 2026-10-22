@@ -21,7 +21,6 @@ public class ModuleComponent extends Component {
     private final Module module;
     private boolean expanded;
     private final List<Component> settingComponents;
-    private float totalHeight;
     private final float moduleSpacing = 5f;
 
     public ModuleComponent(Module module, float x, float y, float width, float height) {
@@ -29,7 +28,6 @@ public class ModuleComponent extends Component {
         this.module = module;
         this.expanded = false;
         this.settingComponents = new ArrayList<>();
-        this.totalHeight = height + moduleSpacing;
 
         float settingY = y + height + moduleSpacing;
         for (Setting setting : module.getSettings()) {
@@ -119,9 +117,6 @@ public class ModuleComponent extends Component {
                     currentY += component.getHeight() + 2;
                 }
             }
-            totalHeight = currentY - y;
-        } else {
-            totalHeight = height + moduleSpacing;
         }
     }
 
@@ -171,28 +166,22 @@ public class ModuleComponent extends Component {
         }
     }
 
+    /**
+     * Layout height of this module including every visible setting.
+     *
+     * <p>Computed on demand rather than cached during {@code render}: the cached value used to
+     * be reset to the collapsed height whenever the ClickGui rebuilt its component list, which
+     * made a tall, partially scrolled-out module stop rendering and pulled every module below
+     * it upwards (the "scrolling teleports" symptom).
+     */
     public float getTotalHeight() {
-        return totalHeight;
-    }
+        if (!expanded) return height + moduleSpacing;
 
-    public float getExpandedTotalHeight() {
-        if (!expanded) {
-            return height + moduleSpacing;
-        }
-        float currentY = height + moduleSpacing;
+        float total = height + moduleSpacing;
         for (Component component : settingComponents) {
-            if (component.isVisible()) {
-                float componentHeight = component.getHeight();
-                if (component instanceof SelectComponent && ((SelectComponent) component).isExpanded()) {
-                    componentHeight += ((SelectComponent) component).getOptionsLength() * component.getHeight();
-                }
-                if (component instanceof ColorComponent && ((ColorComponent) component).isExpanded()) {
-                    componentHeight += ((ColorComponent) component).getPickerHeight();
-                }
-                currentY += componentHeight + 2;
-            }
+            if (component.isVisible()) total += component.getHeight() + 2;
         }
-        return currentY;
+        return total;
     }
 
     public boolean isExpanded() {

@@ -93,11 +93,19 @@ public class ClickGui extends Screen {
             ModuleComponent component = new ModuleComponent(module, x + 75, moduleY, width - 80, 15);
             component.setExpanded(moduleExpandedStates.getOrDefault(module.getName(), false));
             moduleComponents.add(component);
-            totalModuleHeight += component.getExpandedTotalHeight();
+            totalModuleHeight += component.getTotalHeight();
         }
 
         float maxScroll = Math.max(0, totalModuleHeight - (height - 30));
         scrollOffset = Mth.clamp(scrollOffset, 0, maxScroll);
+    }
+
+    /** Recomputes the scrollable content height without rebuilding the component list. */
+    private void recomputeTotalModuleHeight() {
+        totalModuleHeight = 0;
+        for (ModuleComponent component : moduleComponents) {
+            totalModuleHeight += component.getTotalHeight();
+        }
     }
 
     public void setFocusedInput(InputComponent input) {
@@ -234,7 +242,7 @@ public class ClickGui extends Screen {
         if (mouseX >= x + 75 && mouseX <= x + width - 5 &&
                 mouseY >= y + 25 && mouseY <= y + height - 5) {
 
-            updateModuleComponents();
+            recomputeTotalModuleHeight();
 
             float scrollSpeed = 15f;
             scrollOffset -= verticalAmount * scrollSpeed;

@@ -5,6 +5,7 @@ import xyz.whatsyouss.frosty.modules.impl.combat.AutoClicker;
 import xyz.whatsyouss.frosty.modules.impl.combat.KillAura;
 import xyz.whatsyouss.frosty.modules.impl.combat.Velocity;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.AutoGFS;
+import xyz.whatsyouss.frosty.modules.impl.dungeon.BetterTerminal;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.KeyHighlight;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.MobHighlight;
 import xyz.whatsyouss.frosty.modules.impl.mining.commission.CommissionMacro;
@@ -130,6 +131,7 @@ public class ModuleManager {
     public static MobHighlight mobHighlight;
     public static Etherwarp etherwarp;
     public static BlockAnimation blockAnimation;
+    public static BetterTerminal betterTerminal;
 
     public static AutoSell autoSell;
 
@@ -151,7 +153,7 @@ public class ModuleManager {
     public static KuudraHitbox kuudraHitbox;
     public static KuudraPhaseAlert kuudraPhaseAlert;
     public static KuudraProfit kuudraProfit;
-
+    public static DarkMode darkMode;
     public void register() {
         this.addModule(tps = new TPS());
         this.addModule(guiMove = new GuiMove());
@@ -228,6 +230,7 @@ public class ModuleManager {
         this.addModule(mobHighlight = new MobHighlight());
         this.addModule(etherwarp = new Etherwarp());
         this.addModule(blockAnimation = new BlockAnimation());
+        this.addModule(betterTerminal = new BetterTerminal());
         this.addModule(autoSell = new AutoSell());
         this.addModule(supplySwap = new SupplySwap());
         this.addModule(supplyPickupAura = new SupplyPickupAura());
@@ -248,6 +251,7 @@ public class ModuleManager {
         this.addModule(kuudraPhaseAlert = new KuudraPhaseAlert());
         this.addModule(kuudraProfit = new KuudraProfit());
         this.addModule(commissionMacro = new CommissionMacro());
+        this.addModule(darkMode = new DarkMode());
         modules.sort(Comparator.comparing(Module::getName));
     }
 

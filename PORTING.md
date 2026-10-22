@@ -121,3 +121,57 @@ line-width attribute the strips would lose.
 Both are driven by `BlockAnimation#getBlockingHand` (module on, use key held, sword in hand,
 no other item in use). Only the local player can be animated: a remote player's right click
 is not sent to other clients.
+
+## BetterTerminal (yqloss UI + Odin solver)
+
+`modules/impl/dungeon/BetterTerminal` ports
+[Necron-Dev/YqlossClientMixin](https://github.com/Necron-Dev/YqlossClientMixin/tree/master/src/main/kotlin/yqloss/yqlossclientmixinkt/module/betterterminal)
+for the visuals and
+[odtheking/Odin](https://github.com/odtheking/Odin/tree/main/src/main/kotlin/com/odtheking/odin/features/impl/boss)
+for the solver, because the Floor 7 terminals changed with 26.x: panes are per-colour items
+instead of `ItemStack` metadata, and a click is only safe to send as `ContainerInput.CLONE`
+(a middle click) rather than yqloss' window-id-matched queue.
+
+### Solver side (Odin)
+- `utility/dungeon/terminal/TerminalHandler` — Odin's `TerminalHandler`: a `solution` list of
+  the slots still to click, a `clickedSlots` prediction queue, first-click protection
+  (`firstClickProt` ms + optional lag ticks) and a resolve timeout that drops the queue and
+  re-solves when the server never acknowledges a click.
+- `terminalhandler` counterparts live in `PanesTerminalHandler`, `NumbersTerminalHandler`,
+  `RubixTerminalHandler`, `SelectAllTerminalHandler`, `StartsWithTerminalHandler`,
+  `MelodyTerminalHandler`.
+- Every click is `mc.gameMode.handleContainerInput(containerId, slot, button, input, player)`:
+  `CLONE`/button 2 normally, `PICKUP`/button 1 for Rubix right clicks.
+- `ClientPacketListenerMixin` feeds slot updates in *after* the client menu applied them
+  (this is Odin's `SetSlotEvent`); hooking the packet on receive would read a stale menu.
+  This is only a same-tick fast path — click confirmation is transport-agnostic: `recompute()`
+  fingerprints the container (`TerminalItems#signature`) and treats a changed slot as the
+  acknowledgement of the clicks queued up to it. That keeps the panel and its prediction queue
+  correct even when the menu is mutated locally and no packet is ever sent, which is exactly
+  what Odin's terminal simulator does (`TermSimGUI` writes into its own `ChestMenu` after a
+  synthesised `ping / 50` tick delay).
+- 26.x item lookups live in `TerminalItems`: `Items.STAINED_GLASS_PANE.pick(DyeColor.X)`
+  replaces the 1.8.9 metadata ids, and a pane's colour comes from `StainedGlassPaneBlock#getColor`.
+
+### UI side (yqloss)
+- `TerminalType` carries yqloss' geometry (`lines` / `beginLine` / `chestLines` plus the
+  grid rows/cols), so the panel is laid out exactly like the 1.8.9 one: a 212-wide rounded
+  background, a 9-wide grid of 16×16 cells at an 18px pitch, an offset of 8/18 inside the
+  panel, and a panel height of `40 + 18 * (lines - beginLine)`.
+- The panel is drawn from `ContainerScreenRenderEvent` (posted at the tail of
+  `AbstractContainerScreen#extractRenderState`). 26.2 draws a screen in two steps, so hiding
+  the vanilla chest needs both `ContainerScreenMixin` (the chest texture comes from
+  `ContainerScreen#extractBackground`, called from
+  `Screen#extractRenderStateWithTooltipAndSubtitles`) and `AbstractContainerScreenMixin`
+  (`extractContents`: labels, slots, highlights). Both scale instead of hiding when
+  "Show Vanilla Chest GUI" is on. Tooltips are muted while the panel is up.
+- `ContainerMouseClickEvent` (posted at the head of `mouseClicked`) lets the panel consume
+  clicks, so the hidden chest slots never see them.
+- `SlotType` / `SlotRenderInfo` mirror yqloss' enums; `ExponentialSmooth`, `TerminalColors`
+  and the module's `TerminalButton` reproduce the `Button`/`Fade` animation (colour easing,
+  the hover/press HSL lightness bump, the 0.9 press scale) and the cross-fading title.
+- Melody is the one place the two sources disagree: yqloss assumes six rows while Odin's
+  26.x layout has five (target rows 0 and 4, lanes 1-3, buttons at slots 16/25/34). The Odin
+  geometry is used for solving *and* drawing, with yqloss' target-marker / active-lane /
+  button styling layered on top.
+
