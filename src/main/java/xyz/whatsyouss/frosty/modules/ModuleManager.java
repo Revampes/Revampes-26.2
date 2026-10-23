@@ -6,6 +6,7 @@ import xyz.whatsyouss.frosty.modules.impl.combat.KillAura;
 import xyz.whatsyouss.frosty.modules.impl.combat.Velocity;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.AutoGFS;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.BetterTerminal;
+import xyz.whatsyouss.frosty.modules.impl.dungeon.DungeonMap;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.KeyHighlight;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.MobHighlight;
 import xyz.whatsyouss.frosty.modules.impl.mining.commission.CommissionMacro;
@@ -132,6 +133,7 @@ public class ModuleManager {
     public static Etherwarp etherwarp;
     public static BlockAnimation blockAnimation;
     public static BetterTerminal betterTerminal;
+    public static DungeonMap dungeonMap;
 
     public static AutoSell autoSell;
 
@@ -231,6 +233,7 @@ public class ModuleManager {
         this.addModule(etherwarp = new Etherwarp());
         this.addModule(blockAnimation = new BlockAnimation());
         this.addModule(betterTerminal = new BetterTerminal());
+        this.addModule(dungeonMap = new DungeonMap());
         this.addModule(autoSell = new AutoSell());
         this.addModule(supplySwap = new SupplySwap());
         this.addModule(supplyPickupAura = new SupplyPickupAura());

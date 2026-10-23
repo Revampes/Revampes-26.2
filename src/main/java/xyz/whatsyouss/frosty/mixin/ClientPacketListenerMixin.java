@@ -3,10 +3,14 @@ package xyz.whatsyouss.frosty.mixin;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundContainerSetContentPacket;
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
+import net.minecraft.network.protocol.game.ClientboundMapItemDataPacket;
+import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import xyz.whatsyouss.frosty.utility.dungeon.map.DungeonMapScanner;
+import xyz.whatsyouss.frosty.utility.dungeon.map.DungeonTracker;
 import xyz.whatsyouss.frosty.utility.dungeon.terminal.TerminalManager;
 
 /**
@@ -17,6 +21,10 @@ import xyz.whatsyouss.frosty.utility.dungeon.terminal.TerminalManager;
  * <p>This is only a same-tick fast path. Confirmation of queued clicks no longer depends on it:
  * {@code TerminalHandler} fingerprints the container while re-solving, so a menu mutated
  * locally (Odin's terminal simulator never sends these packets) is handled identically.
+ *
+ * <p>Also feeds the dungeon map: the map item's colours (rooms, doors, checkmarks, player icons)
+ * are only final once the patch has been applied, and the action bar carries the per-room secret
+ * count. Both are {@code TAIL} hooks for the same reason.
  */
 @Mixin(ClientPacketListener.class)
 public abstract class ClientPacketListenerMixin {
@@ -29,5 +37,15 @@ public abstract class ClientPacketListenerMixin {
     @Inject(method = "handleContainerContent", at = @At("TAIL"))
     private void frosty$onContainerContent(ClientboundContainerSetContentPacket packet, CallbackInfo ci) {
         TerminalManager.onContainerUpdate(packet.containerId());
+    }
+
+    @Inject(method = "handleMapItemData", at = @At("TAIL"))
+    private void frosty$onMapItemData(ClientboundMapItemDataPacket packet, CallbackInfo ci) {
+        DungeonMapScanner.onMapPacket(packet);
+    }
+
+    @Inject(method = "setActionBarText", at = @At("TAIL"))
+    private void frosty$onActionBarText(ClientboundSetActionBarTextPacket packet, CallbackInfo ci) {
+        DungeonTracker.onActionBar(packet.text().getString());
     }
 }

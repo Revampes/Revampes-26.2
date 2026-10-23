@@ -13,6 +13,21 @@ public abstract class Setting {
         this.name = name;
     }
 
+    /**
+     * Optional caption the ClickGui draws above this setting when it differs from the previous
+     * one, so a module with a lot of settings can be split into readable sections.
+     */
+    public String group = "";
+
+    public Setting group(String group) {
+        this.group = group;
+        return this;
+    }
+
+    public String getGroup() {
+        return group;
+    }
+
 
     public void setVisibilityCondition(BooleanSupplier condition) {
         this.visibilityCondition = condition;

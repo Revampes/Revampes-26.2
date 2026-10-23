@@ -30,7 +30,13 @@ public class ModuleComponent extends Component {
         this.settingComponents = new ArrayList<>();
 
         float settingY = y + height + moduleSpacing;
+        String currentGroup = "";
         for (Setting setting : module.getSettings()) {
+            if (!setting.getGroup().isEmpty() && !setting.getGroup().equals(currentGroup)) {
+                currentGroup = setting.getGroup();
+                settingComponents.add(new LabelComponent(currentGroup, x + 5, settingY, width - 10, 11));
+                settingY += 11 + 2;
+            }
             if (setting instanceof xyz.whatsyouss.frosty.settings.impl.KeyBindSetting) {
                 settingComponents.add(new KeyBindComponent((xyz.whatsyouss.frosty.settings.impl.KeyBindSetting) setting,
                         x + 5, settingY, width - 10, height - 5));

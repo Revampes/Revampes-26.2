@@ -175,3 +175,67 @@ instead of `ItemStack` metadata, and a click is only safe to send as `ContainerI
   geometry is used for solving *and* drawing, with yqloss' target-marker / active-lane /
   button styling layered on top.
 
+## DungeonMap (devonian port)
+
+`modules/impl/dungeon/DungeonMap` ports
+[Synnerz/devonian](https://github.com/Synnerz/devonian/tree/26.3/src/main/kotlin/com/github/synnerz/devonian/features/dungeons/map)
+(GPL-3.0, same licence as this project) — the Catacombs map with room types, secrets,
+checkmarks, door types, room type prediction and player markers.
+
+### Where everything lives
+- `utility/dungeon/map/DungeonScanner` — devonian's `DungeonScanner`: walks the 6x6 component
+  grid inside the dungeon, finds rooms from the highest non-air block of a component, stitches
+  neighbours onto the same room when the block between them is a doorway, and identifies a room
+  by hashing the block column in its centre (`hashCeil`) against `assets/frosty/dungeons/rooms.json`.
+- `utility/dungeon/map/LegacyRegistry` — the 1.8.9 block id table the hash needs (Hypixel's rooms
+  were built with those ids). Registry names are unchanged in 26.2, so devonian's table is used
+  as-is.
+- `utility/dungeon/map/DungeonMapScanner` — devonian's `DungeonMapScanner`: decodes the dungeon
+  map item (room colours, centre pixel = checkmark, door gaps, map decorations = everyone's
+  position and facing). This is what gives the map its live state; the world scan gives names,
+  shapes and secret totals.
+- `utility/dungeon/map/DungeonTracker` — the part of devonian's `Dungeons` object the map needs
+  (`floor`, `inBoss`, `started`, puzzle count, player list / classes). Devonian gets these from
+  tab-update / scoreboard / action-bar events; this mod has none of those events, so the same
+  regexes run against `Utils.getTablist` + `Utils.getScoreboardSidebarLines` once per tick, and
+  `mixin/ClientPacketListenerMixin` feeds the action bar (`x/y Secrets`) and the map item packet.
+- `utility/dungeon/map/DungeonMapRenderer` + `DungeonMapOptions` + `DungeonMapRoomPrediction` —
+  the rendering and the room type prediction.
+- `hud/impl/DungeonMapWidget` — the on-screen element.
+- `assets/frosty/dungeons/` — `rooms.json` plus devonian's checkmark / puzzle / marker textures,
+  copied verbatim.
+
+### Deviations from the source
+- **Drawing.** Devonian rasterises the map into a `BufferedImage` and uploads it as a texture,
+  with a second "MC font" path for the text. This port draws the same geometry directly:
+  rooms/doors are filled GUI quads, the icons are the same PNGs blitted from resources, the text
+  always uses the Minecraft font. The `Use MC Font Renderer` switch and the `"guys how do i
+  change map font"` joke button therefore have no equivalent and were dropped; everything else
+  (including every colour, alignment, shadow, prediction and marker setting) is present.
+- **HUD editing.** The map is a regular `HudWidget`, so it is placed in the normal *Edit HUD*
+  screen (drag to move, scroll to resize) instead of devonian's own HUD editor.
+- **Show Hidden Rooms.** Devonian has a hardcoded, always-off `SETTING_RENDER_HIDDEN_ROOMS`
+  flag. It is a real switch here (`Behavior` group), which is what was asked for.
+- **Secret sync.** The websocket secret synchronisation between devonian users, the run score
+  math and the `dumpmap` debug subcommand were not ported; the per-room secret count itself
+  (`Render Secret Count`) works from the action bar.
+- **Markers.** Both the pointer marker and the player head are rotated with the player's facing.
+  Class colours come from `DungeonClass`'s defaults instead of devonian's global
+  `Dungeon Colors` settings.
+- **Entering / leaving.** A run is an actual in-dungeon signal: the sidebar line
+  `The Catacombs (F7)`, backed up by a tab-list check that explicitly excludes the Dungeon Hub
+  (`LocationUtils#isInDungeon` matches any entry containing "Dungeon", which also matches the
+  hub and left a finished run's map on screen). Since every run is its own world, a change of
+  `mc.level` drops the previous rooms immediately, and there is a 20 tick grace period so a
+  sidebar rebuild alone does not wipe the map.
+
+### Settings grouping
+The ClickGui used to render every setting as one flat list, which is unusable for a module with
+60+ of them. `Setting#group` + `gui/component/impl/LabelComponent` add optional caption rows;
+they are only drawn where a module sets a group, so every other module looks unchanged.
+### Asset paths must be lowercase
+`Identifier` paths only allow `a-z0-9/._-`, and devonian's map textures are camelCase
+(`greenCheck.png`, `checks/vanillaNew/...`). They are stored lowercased here
+(`greencheck.png`, `checks/vanillanew/...`) and `DungeonMapRenderer` builds every icon path with
+`Identifier.tryParse`, skipping (and logging once) instead of throwing. An uppercase path in a
+render call is a hard crash, not a missing texture — that is what "Render Checkmarks" used to do.
