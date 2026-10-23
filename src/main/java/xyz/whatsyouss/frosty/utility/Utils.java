@@ -48,13 +48,13 @@ public class Utils {
 
     public static void addChatMessage(String message) {
         if (mc.player != null) {
-            mc.player.sendSystemMessage(Component.literal("§7[§9F§br§9o§bs§9t§by§7] " + message));
+            mc.player.sendSystemMessage(Component.literal("§7[§9R§be§9v§ba§9m§bp§9e§bs§7] " + message));
         }
     }
 
     public static void addModuleMessage(String moduleName, String message) {
         if (mc.player != null) {
-            mc.player.sendSystemMessage(Component.literal("§7[§9F§br§9o§bs§9t§by§7] " + "§7[§f§l" + moduleName + "§7] " + message));
+            mc.player.sendSystemMessage(Component.literal("§7[§9R§be§9v§ba§9m§bp§9e§bs§7] " + "§7[§f§l" + moduleName + "§7] " + message));
         }
     }
 

@@ -87,7 +87,7 @@ public class BetterTerminal extends Module {
     public final SliderSetting lagProtectionTicks =
             new SliderSetting("Lag Protection", "ticks", 8, 7, 16, 1);
     public final SelectSetting rubixMode =
-            new SelectSetting("Rubix Mode", 0, new String[]{"Fewest Clicks", "Left Clicks Only"});
+            new SelectSetting("Rubix Mode", 1, new String[]{"Fewest Clicks", "Left Clicks Only"});
 
     // Terminal toggles + per-terminal options.
     public final ButtonSetting orderEnabled = new ButtonSetting("Order Terminal", true);
@@ -112,11 +112,11 @@ public class BetterTerminal extends Module {
     public final ButtonSetting alignSmooth = new ButtonSetting("Align Smooth GUI", true);
 
     // Presentation.
-    public final SliderSetting guiScale = new SliderSetting("GUI Scale", 1.0, 0.5, 3.0, 0.05);
+    public final SliderSetting guiScale = new SliderSetting("GUI Scale", 2.0, 0.5, 3.0, 0.05);
     public final SliderSetting cornerRadius = new SliderSetting("Slot Roundness", 4.0, 0.0, 8.0, 1.0);
     public final ButtonSetting backgroundEnabled = new ButtonSetting("Background", true);
     public final SliderSetting backgroundRadius = new SliderSetting("Background Roundness", 12.0, 0.0, 20.0, 1.0);
-    public final ButtonSetting showChest = new ButtonSetting("Show Vanilla Chest GUI", false);
+    public final ButtonSetting showChest = new ButtonSetting("Show Vanilla Chest GUI", true);
     public final SliderSetting chestScale = new SliderSetting("Vanilla Chest Scale", 0.25, 0.05, 1.0, 0.05);
     public final ButtonSetting dragClick = new ButtonSetting("Drag Click", false);
 

@@ -1,30 +1,104 @@
-# Automatically build the project and run any configured tests for every push
-# and submitted pull request. This can help catch issues that only occur on
-# certain platforms or Java versions, and provides a first line of defence
-# against bad commits.
+name: Build and release
 
-name: build
-on: [pull_request, push]
+on:
+  pull_request:
+  push:
+    paths-ignore:
+      - gradle.properties
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - name: checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v6
-      - name: validate gradle wrapper
+        with:
+          fetch-depth: 0
+
+      - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v6
-      - name: setup jdk
+
+      - name: Set up JDK
         uses: actions/setup-java@v5
         with:
           java-version: '25'
-          distribution: 'microsoft'
-      - name: make gradle wrapper executable
+          distribution: microsoft
+
+      - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: build
+
+      - name: Build
         run: ./gradlew build
-      - name: capture build artifacts
+
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: Artifacts
+          name: Revampes
           path: build/libs/
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Calculate and apply version bump
+        id: version
+        shell: bash
+        run: |
+          current_version=$(sed -n 's/^mod_version=//p' gradle.properties)
+          version_without_metadata="${current_version%%+*}"
+          metadata=""
+          if [[ "$current_version" == *"+"* ]]; then
+            metadata="+${current_version#*+}"
+          fi
+          base_version="${version_without_metadata%%-*}"
+          IFS='.' read -r major minor patch <<< "$base_version"
+          next_version="$major.$minor.$((patch + 1))$metadata"
+          sed -i "s/^mod_version=.*/mod_version=$next_version/" gradle.properties
+          echo "version=$next_version" >> "$GITHUB_OUTPUT"
+
+      - name: Commit version bump
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gradle.properties
+          git commit -m "chore: bump version to $VERSION"
+          git push origin HEAD:${GITHUB_REF_NAME}
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: microsoft
+
+      - name: Build release artifact
+        run: |
+          chmod +x ./gradlew
+          ./gradlew build
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          COMMIT_ID: ${{ github.sha }}
+          PUSHER: ${{ github.actor }}
+          CHANGE_DESCRIPTION: ${{ github.event.head_commit.message }}
+        run: |
+          gh release create "v$VERSION" build/libs/* \
+            --title "Revampes $VERSION" \
+            --notes "## Release information
+
+          - **Version:** $VERSION
+          - **Commit/push ID:** $COMMIT_ID
+          - **Pushed by:** $PUSHER
+          - **Changes:** $CHANGE_DESCRIPTION"
