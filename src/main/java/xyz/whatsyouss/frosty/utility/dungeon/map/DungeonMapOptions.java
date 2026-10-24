@@ -4,12 +4,6 @@ import java.awt.Color;
 import java.util.EnumMap;
 import java.util.Map;
 
-/**
- * Ported from devonian ({@code features/dungeons/map/DungeonMapRenderOptions.kt}).
- *
- * <p>Devonian builds this as an immutable data class every time the map image is rebuilt; the map
- * is drawn straight to the GUI here, so the module fills one shared instance per frame instead.
- */
 public class DungeonMapOptions {
 
     public enum MapColor {
@@ -31,7 +25,6 @@ public class DungeonMapOptions {
         DoorBlood
     }
 
-    /** Which cell of a multi-component room the icon / text is anchored to. */
     public enum RoomInfoAlignment {
         TopLeft, TopRight,
         BottomLeft, BottomRight,
@@ -106,7 +99,6 @@ public class DungeonMapOptions {
     public double textSize = 1.33;
     public double unknownRoomsDarkenFactor = 0.7;
 
-    // markers
     public boolean usePlayerHeads = true;
     public boolean useMarkerSelf = true;
     public boolean renderNames = true;
@@ -118,7 +110,6 @@ public class DungeonMapOptions {
     public double markerScale = 3.16;
     public double headScale = 2.5;
 
-    // behavior
     public boolean rotate;
     public boolean showInBoss;
 

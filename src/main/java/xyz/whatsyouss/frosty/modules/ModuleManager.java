@@ -5,6 +5,7 @@ import xyz.whatsyouss.frosty.modules.impl.combat.AutoClicker;
 import xyz.whatsyouss.frosty.modules.impl.combat.KillAura;
 import xyz.whatsyouss.frosty.modules.impl.combat.Velocity;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.AutoGFS;
+import xyz.whatsyouss.frosty.modules.impl.dungeon.AutoCroesus;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.BetterTerminal;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.DungeonMap;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.KeyHighlight;
@@ -134,6 +135,7 @@ public class ModuleManager {
     public static BlockAnimation blockAnimation;
     public static BetterTerminal betterTerminal;
     public static DungeonMap dungeonMap;
+    public static AutoCroesus autoCroesus;
 
     public static AutoSell autoSell;
 
@@ -234,6 +236,7 @@ public class ModuleManager {
         this.addModule(blockAnimation = new BlockAnimation());
         this.addModule(betterTerminal = new BetterTerminal());
         this.addModule(dungeonMap = new DungeonMap());
+        this.addModule(autoCroesus = new AutoCroesus());
         this.addModule(autoSell = new AutoSell());
         this.addModule(supplySwap = new SupplySwap());
         this.addModule(supplyPickupAura = new SupplyPickupAura());

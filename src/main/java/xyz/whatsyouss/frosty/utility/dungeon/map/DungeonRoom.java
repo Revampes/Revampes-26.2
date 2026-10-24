@@ -12,16 +12,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Ported from devonian ({@code api/dungeon/DungeonRoom.kt}).
- *
- * <p>A room is a set of components (1 to 4). Its identity — name, secrets, clear type — is
- * resolved from the block column in the middle of each of those components, which is what
- * {@link DungeonScanner#hashCeil} hashes against {@code rooms.json}.
- */
 public class DungeonRoom {
 
-    /** Corner offsets relative to a component's centre, in the order devonian probes them. */
     public static final List<World> ROOM_OFFSETS = List.of(
             new World(-DungeonPositions.HALF_ROOM_SIZE, -DungeonPositions.HALF_ROOM_SIZE),
             new World(DungeonPositions.HALF_ROOM_SIZE, -DungeonPositions.HALF_ROOM_SIZE),
@@ -87,7 +79,6 @@ public class DungeonRoom {
         return false;
     }
 
-    /** Resolves the room identity and reset its checkmark, the way devonian does every scan. */
     public void update() {
         comps.sort(Comparator.comparingInt(WorldComponent::cx).thenComparingInt(WorldComponent::cz));
         scan();
@@ -131,10 +122,6 @@ public class DungeonRoom {
         update();
     }
 
-    /**
-     * Finds which of the four possible corners is the room's real corner: Hypixel marks it with a
-     * blue terracotta block at roof height ({@code rotation} stays -1 until one is found).
-     */
     public void findRotation() {
         if (height == 0) return;
         if ("1x4".equals(shapeIn) && comps.size() < 4) return;

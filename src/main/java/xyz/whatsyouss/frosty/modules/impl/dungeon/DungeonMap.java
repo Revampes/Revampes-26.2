@@ -22,20 +22,6 @@ import java.awt.Color;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-/**
- * Ported from devonian ({@code features/dungeons/map/DungeonMap.kt}) — the settings and the run
- * plumbing; the drawing lives in {@link DungeonMapWidget} / {@code DungeonMapRenderer} and the
- * room data in {@code utility.dungeon.map}.
- *
- * <p>Two deliberate deviations from the source:
- * <ul>
- *     <li>devonian has a hardcoded {@code SETTING_RENDER_HIDDEN_ROOMS} flag (always off, not
- *     configurable). It is a real <em>Show Hidden Rooms</em> switch here, which is what the user
- *     asked for.</li>
- *     <li>the map element is a regular HUD widget, so it is moved / scaled in the normal
- *     <em>Edit HUD</em> screen instead of devonian's own HUD editor.</li>
- * </ul>
- */
 public class DungeonMap extends Module {
 
     private static final String PRESETS = "Presets";
@@ -45,8 +31,6 @@ public class DungeonMap extends Module {
     private static final String MARKERS = "Markers";
 
     private final DungeonMapWidget widget = new DungeonMapWidget(this);
-
-    // ------------------------------------------------------------------ markers
 
     public final ButtonSetting renderPlayerHeads = add(new ButtonSetting("Render Player Heads", true), MARKERS);
     public final ButtonSetting useMarkerSelf = add(new ButtonSetting("Use Marker for Self", true), MARKERS);
@@ -60,8 +44,6 @@ public class DungeonMap extends Module {
             add(new SliderSetting("Player Name Scale", 2.4, 0.0, 10.0, 0.01), MARKERS);
     public final SliderSetting markerScale = add(new SliderSetting("Marker Scale", 3.16, 0.0, 10.0, 0.01), MARKERS);
     public final SliderSetting headScale = add(new SliderSetting("Head Scale", 2.5, 0.0, 10.0, 0.01), MARKERS);
-
-    // ------------------------------------------------------------------ style
 
     public final SliderSetting roomSize = add(new SliderSetting("Room Size", 0.8, 0.0, 1.0, 0.01), STYLE);
     public final SliderSetting doorSize = add(new SliderSetting("Door Size", 0.31, 0.0, 1.0, 0.01), STYLE);
@@ -82,8 +64,6 @@ public class DungeonMap extends Module {
     public final SelectSetting textShadow =
             add(new SelectSetting("Text Shadow", 1, DungeonMapOptions.TextShadow.displayNames()), STYLE);
     public final ButtonSetting colorRoomText = add(new ButtonSetting("Color Room Name", true), STYLE);
-
-    // ------------------------------------------------------------------ behavior
 
     public final ButtonSetting renderCheckmark = add(new ButtonSetting("Render Checkmarks", false), BEHAVIOR);
     public final ButtonSetting renderPuzzleIcon = add(new ButtonSetting("Render Puzzle Icon", false), BEHAVIOR);
@@ -106,10 +86,8 @@ public class DungeonMap extends Module {
     public final ButtonSetting showInBoss = add(new ButtonSetting("Show In Boss", false), BEHAVIOR);
     public final ButtonSetting predictRooms =
             add(new ButtonSetting("Predict Room Types", true), BEHAVIOR);
-    /** Devonian keeps this as a hardcoded off flag; here it is the requested toggle. */
-    public final ButtonSetting showHiddenRooms = add(new ButtonSetting("Show Hidden Rooms", false), BEHAVIOR);
 
-    // ------------------------------------------------------------------ colors
+    public final ButtonSetting showHiddenRooms = add(new ButtonSetting("Show Hidden Rooms", false), BEHAVIOR);
 
     public final ColorSetting backgroundColor =
             add(new ColorSetting("Map Background Color", new Color(1577189633, true)), COLORS);
@@ -144,8 +122,6 @@ public class DungeonMap extends Module {
     public final ColorSetting bloodDoorColor =
             add(new ColorSetting("Blood Door Color", new Color(255, 0, 0)), COLORS);
     public final ButtonSetting normalDoorDynamic = add(new ButtonSetting("Normal Door Dynamic Color", true), COLORS);
-
-    // ------------------------------------------------------------------ presets
 
     private final ButtonSetting defaultStyle = add(
             new ButtonSetting("Default Style", this::applyDefaultStyle), PRESETS);
@@ -204,9 +180,6 @@ public class DungeonMap extends Module {
         DungeonTracker.onChat(event.getMessage().getString());
     }
 
-    // ------------------------------------------------------------------ render options
-
-    /** Fills the renderer options from the current settings (one shared instance per frame). */
     public DungeonMapOptions buildOptions() {
         DungeonMapOptions options = new DungeonMapOptions();
 
@@ -272,8 +245,6 @@ public class DungeonMap extends Module {
 
         return options;
     }
-
-    // ------------------------------------------------------------------ style presets
 
     private void applyDocStyle() {
         doorSize.setInput(0.36);
@@ -449,8 +420,6 @@ public class DungeonMap extends Module {
     private void applyCatlasColors() {
         applyLegalMapColors();
     }
-
-    // ------------------------------------------------------------------ import / export
 
     private void exportStyle() {
         JsonObject json = new JsonObject();

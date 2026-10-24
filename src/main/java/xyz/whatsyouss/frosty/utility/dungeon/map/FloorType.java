@@ -1,9 +1,5 @@
 package xyz.whatsyouss.frosty.utility.dungeon.map;
 
-/**
- * Ported from devonian ({@code api/dungeon/FloorType.kt}); only the geometry and the puzzle /
- * trap rules are used by the map, the score formula stayed behind.
- */
 public enum FloorType {
     None(0, false, "", 0, 0, 0, 0),
 
@@ -28,10 +24,10 @@ public enum FloorType {
     public final int floorNum;
     public final boolean masterMode;
     public final String shortName;
-    /** Rooms across / down, including the half rooms on the right and bottom edge. */
+
     public final int roomsW;
     public final int roomsH;
-    /** Rooms that can actually hold a room (the right/bottom column is always half sized). */
+
     public final int roomsWS;
     public final int roomsHS;
 

@@ -3,16 +3,6 @@ package xyz.whatsyouss.frosty.utility.dungeon.map;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Ported from devonian ({@code api/dungeon/LegacyRegistry.kt}), which in turn credits Skytils'
- * {@code catlas/state2legacy.json}.
- *
- * <p>Rooms are identified by hashing the 1.8.9 block ids of the column of blocks in the middle of
- * a room component (see {@link DungeonScanner#hashCeil}). Hypixel's dungeon rooms were built with
- * those ids, so every modern block that can show up in that column has to be mapped back onto the
- * id it used to have. Anything missing here silently drops out of the hash and the room stops
- * resolving, so keep this list in sync with the rooms that actually get scanned.
- */
 public final class LegacyRegistry {
 
     public static final Map<String, Integer> BLOCKS;

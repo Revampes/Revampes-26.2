@@ -3,14 +3,6 @@ package xyz.whatsyouss.frosty.utility.dungeon.map;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Ported from devonian ({@code api/dungeon/Coordinates.kt}).
- *
- * <p>The catacombs always spawn in the same corner of the world, so a world coordinate can be
- * mapped onto the map's component grid: every room is 31 blocks wide, every door 1 block, which
- * gives a fixed 32 block pitch. Component coordinates count half rooms, so a room component is
- * always {@code (even, even)} and a door component always has exactly one odd coordinate.
- */
 public final class DungeonPositions {
 
     public static final int CORNER_START_X = -200;
@@ -24,7 +16,6 @@ public final class DungeonPositions {
     private DungeonPositions() {
     }
 
-    /** Component grid bounds used by every scanner: {@code x}/{@code z} in {@code [0, 10]}. */
     public static boolean isInBounds(int x, int z) {
         return x >= 0 && x <= 11 && z >= 0 && z <= 11;
     }
@@ -56,10 +47,6 @@ public final class DungeonPositions {
         }
     }
 
-    /**
-     * A player position expressed in component space, {@code r} being the rotation in radians
-     * clockwise from +x (that is: +z is downwards, like the map is drawn).
-     */
     public record PlayerComponent(double x, double z, double r) {
         public Component toComponent() {
             return new Component((int) x, (int) z);

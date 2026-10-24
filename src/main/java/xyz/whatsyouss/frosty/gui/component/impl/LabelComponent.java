@@ -9,12 +9,6 @@ import java.awt.Color;
 
 import static xyz.whatsyouss.frosty.Frosty.mc;
 
-/**
- * A caption row shown between settings that share a {@link xyz.whatsyouss.frosty.settings.Setting#group}.
- *
- * <p>Modules with a lot of settings (the dungeon map has 60+) used to be one long undifferentiated
- * list; grouping them keeps the ClickGui readable without turning the panel into nested menus.
- */
 public class LabelComponent extends Component {
 
     private final String text;

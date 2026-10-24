@@ -8,12 +8,6 @@ import xyz.whatsyouss.frosty.utility.dungeon.map.DungeonPositions.WorldComponent
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-/**
- * Ported from devonian ({@code api/dungeon/DungeonDoor.kt}).
- *
- * <p>Doors are probed at a fixed {@code y=69} — the height of every dungeon doorway — where the
- * block in the doorway tells the door type, and air / a barrier means it is already open.
- */
 public class DungeonDoor {
 
     public final WorldComponent comp;

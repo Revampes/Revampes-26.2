@@ -215,6 +215,9 @@ public class ConfigManager {
                         }
                     } else if (setting instanceof SelectSetting) {
                         settingsObject.addProperty(setting.getName(), ((SelectSetting) setting).getValue());
+                    } else if (setting instanceof MultiSelectSetting) {
+                        settingsObject.addProperty(setting.getName(),
+                                String.join(",", ((MultiSelectSetting) setting).getSelectedNames()));
                     } else if (setting instanceof ButtonSetting && !(setting instanceof KeyBindSetting)) {
                         settingsObject.addProperty(setting.getName(), ((ButtonSetting) setting).isToggled());
                     } else if (setting instanceof InputSetting) {
@@ -275,6 +278,9 @@ public class ConfigManager {
                         }
                     } else if (setting instanceof SelectSetting) {
                         ((SelectSetting) setting).setValue(settingsObject.get(setting.getName()).getAsDouble());
+                    } else if (setting instanceof MultiSelectSetting multi) {
+                        String raw = settingsObject.get(setting.getName()).getAsString();
+                        multi.setSelectedNames(raw.isEmpty() ? List.of() : List.of(raw.split(",")));
                     } else if (setting instanceof ButtonSetting && !(setting instanceof KeyBindSetting)) {
                         ((ButtonSetting) setting).setEnabled(settingsObject.get(setting.getName()).getAsBoolean());
                     } else if (setting instanceof InputSetting) {

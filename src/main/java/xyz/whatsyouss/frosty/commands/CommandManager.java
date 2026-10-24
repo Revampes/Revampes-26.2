@@ -15,6 +15,7 @@ public class CommandManager {
     public static PosCommand posCommand;
     public static ToggleCommand toggleCommand;
     public static FarmingCommand farmingCommand;
+    public static AutoCroesusCommand autoCroesusCommand;
 
     public void register() {
         this.addCommand(bindCommand = new BindCommand());
@@ -23,6 +24,7 @@ public class CommandManager {
         this.addCommand(posCommand = new PosCommand());
         this.addCommand(toggleCommand = new ToggleCommand());
         this.addCommand(farmingCommand = new FarmingCommand());
+        this.addCommand(autoCroesusCommand = new AutoCroesusCommand());
     }
 
     public void addCommand(Command m) {

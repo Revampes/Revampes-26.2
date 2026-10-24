@@ -4,12 +4,6 @@ import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.world.entity.player.Player;
 import xyz.whatsyouss.frosty.utility.dungeon.map.DungeonPositions.PlayerComponent;
 
-/**
- * Ported from devonian ({@code api/dungeon/DungeonPlayer.kt}).
- *
- * <p>Positions are lerped between updates because the map icons come from the map item (which
- * only ticks a few times per second) while the room scan ticks every client tick.
- */
 public class DungeonPlayer {
 
     public final String name;

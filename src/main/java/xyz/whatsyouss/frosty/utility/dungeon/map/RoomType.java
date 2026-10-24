@@ -1,11 +1,5 @@
 package xyz.whatsyouss.frosty.utility.dungeon.map;
 
-/**
- * Ported from devonian ({@code api/dungeon/mapEnums/RoomTypes.kt}).
- *
- * <p>{@code prio} is used when a door has to pick which of its two rooms decides the door
- * colour: the lowest priority wins, so blood beats entrance beats puzzle and so on.
- */
 public enum RoomType {
     BLOOD(0),
     ENTRANCE(10),

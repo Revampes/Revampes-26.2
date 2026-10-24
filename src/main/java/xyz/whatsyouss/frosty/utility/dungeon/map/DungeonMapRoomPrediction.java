@@ -6,15 +6,6 @@ import xyz.whatsyouss.frosty.utility.dungeon.map.DungeonPositions.Neighbor;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Ported from devonian ({@code features/dungeons/map/DungeonMapRoomPrediction.kt}).
- *
- * <p>Works out what the still-unopened rooms must be, from the rooms that are already known: the
- * missing trap / puzzle / yellow rooms are spread over the cells that can still be entered.
- *
- * <p>Devonian labels its x loop {@code loop} and jumps to it from inside two nested lambdas; the
- * same early exits are expressed as a {@code skipCell} flag here.
- */
 public final class DungeonMapRoomPrediction {
 
     private DungeonMapRoomPrediction() {

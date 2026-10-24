@@ -17,14 +17,6 @@ import java.util.Set;
 
 import static xyz.whatsyouss.frosty.Frosty.mc;
 
-/**
- * Ported from devonian ({@code api/dungeon/DungeonMapScanner.kt}).
- *
- * <p>Hypixel's dungeon map item is a normal vanilla map whose colours encode the whole run: each
- * room is a block of colour, the middle pixel of the room is its checkmark, and the gaps between
- * rooms are the doors. Reading it back gives the layout, revealed rooms, door types and — from
- * the map's decorations — where everyone is and which way they are facing.
- */
 public final class DungeonMapScanner {
 
     private static final int COLOR_SIZE = 16384;
@@ -99,7 +91,6 @@ public final class DungeonMapScanner {
         swapCooldown = System.currentTimeMillis() + 6000L;
     }
 
-    /** Called from the {@code handleMapItemData} mixin, i.e. after the patch was applied. */
     public static void onMapPacket(ClientboundMapItemDataPacket packet) {
         if (!DungeonTracker.active) return;
         if (mc.level == null) return;
@@ -184,7 +175,7 @@ public final class DungeonMapScanner {
         if (alive != decorations.size()) return;
 
         Iterator<DungeonPlayer> iterator = players.iterator();
-        iterator.next(); // the first entry is always self, whose icon the map does not carry
+        iterator.next();
 
         for (MapDecoration decoration : decorations) {
             if (!iterator.hasNext()) return;

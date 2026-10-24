@@ -21,15 +21,6 @@ import java.util.Map;
 
 import static xyz.whatsyouss.frosty.Frosty.mc;
 
-/**
- * Ported from devonian ({@code features/dungeons/map/DungeonMapBaseRenderer.kt}).
- *
- * <p>Devonian rasterises the map into a {@code BufferedImage} (rooms, doors, icons and — depending
- * on the font setting — the room text) and uploads it as a texture. This port draws the same
- * geometry straight onto the GUI instead: rooms and doors are filled quads, the icons are the same
- * PNGs blitted from the mod's resources, and the text is always the Minecraft font. That removes
- * the image/atlas machinery while keeping the layout, colours and decorations identical.
- */
 public final class DungeonMapRenderer {
 
     private static final int MARKER_ATLAS_WIDTH = 200;
@@ -40,10 +31,6 @@ public final class DungeonMapRenderer {
     private static final float[] MARKER_POINTER_OUTLINE = {0, 140, 100, 140};
     private static final float[] MARKER_HEAD_OUTLINE = {100, 140, 80, 80};
 
-    /**
-     * Texture folders are the lowercase ones on disk: {@code Identifier} paths reject uppercase
-     * characters, so the devonian asset names (which were camelCase) are stored lowercased.
-     */
     private static final String[] ICON_STYLES = {"illegalmap", "neu", "vanillanew", "vanillaold"};
 
     private static final Map<String, String> SPECIAL_ROOMS = Map.of(
@@ -99,7 +86,6 @@ public final class DungeonMapRenderer {
                 pose.rotate((float) (self.r() - Math.PI * 0.5));
                 pose.translate(-px, -py);
 
-                // The rotated map no longer fits the element box, so clip it like devonian does.
                 ctx.enableScissor(Math.round(x), Math.round(y), Math.round(x + size), Math.round(y + size));
                 scissored = true;
             }
@@ -115,8 +101,6 @@ public final class DungeonMapRenderer {
         if (scissored) ctx.disableScissor();
         pose.popMatrix();
     }
-
-    // ------------------------------------------------------------------ geometry helpers
 
     private static float mapX(float componentX, float maxDim, float ox, float compToPx) {
         return (float) MapMath.rescale(componentX, 0, maxDim * 2.0, ox, ox + maxDim * compToPx);
@@ -142,8 +126,6 @@ public final class DungeonMapRenderer {
         ctx.fill(w - lw, lw, w, w, borderColor);
         ctx.fill(lw, w - lw, w - lw, w, borderColor);
     }
-
-    // ------------------------------------------------------------------ colours
 
     private static int baseColorForRoom(DungeonMapOptions options, RoomType type, ClearType clear) {
         Color color = switch (type) {
@@ -185,8 +167,6 @@ public final class DungeonMapRenderer {
     private static int predictionColor(DungeonMapOptions options, RoomType type, DungeonRoom room) {
         return darkenRoomColor(options, baseColorForRoom(options, type, null), room.explored);
     }
-
-    // ------------------------------------------------------------------ doors
 
     private static void drawDoors(GuiGraphicsExtractor ctx, DungeonMapOptions options, DungeonDoor[] doors,
                                   float ox, float oy, float compToPx) {
@@ -267,8 +247,6 @@ public final class DungeonMapRenderer {
             ctx.fill(bx, by, bx + bw + 1, by + bh + 1, color);
         }
     }
-
-    // ------------------------------------------------------------------ rooms
 
     private static void drawRooms(GuiGraphicsExtractor ctx, Font font, DungeonMapOptions options,
                                   List<DungeonMapRoomData> rooms, float ox, float oy, float compToPx) {
@@ -452,8 +430,6 @@ public final class DungeonMapRenderer {
         int bh = (int) Math.ceil(fh * compToPx);
         ctx.fill(bx, by, bx + bw + 1, by + bh + 1, color);
     }
-
-    // ------------------------------------------------------------------ room name / secret / icon
 
     private static void drawRoomInfo(GuiGraphicsExtractor ctx, Font font, DungeonMapOptions options,
                                      DungeonRoom room, List<WorldComponent> cells, ShapeType shape,
@@ -644,8 +620,6 @@ public final class DungeonMapRenderer {
         }
     }
 
-    // ------------------------------------------------------------------ players
-
     private static void drawPlayers(GuiGraphicsExtractor ctx, Font font, DungeonMapOptions options,
                                     FloorType floor, float maxDim, float ox, float oy, float compToPx,
                                     float hudScale) {
@@ -686,7 +660,7 @@ public final class DungeonMapRenderer {
             Matrix3x2fStack pose = ctx.pose();
             pose.pushMatrix();
             pose.translate(px, py);
-            // Both marker and head are rotated so the sprite points where the player is facing.
+
             pose.rotate((float) (Math.PI * 0.5 - pos.r()));
 
             if (options.colorMarkerByClass && player.role != DungeonClass.Unknown
@@ -771,8 +745,6 @@ public final class DungeonMapRenderer {
         }
     }
 
-    // ------------------------------------------------------------------ text helpers
-
     private static void drawText(GuiGraphicsExtractor ctx, Font font, String text, int x, int y, TextShadow shadow) {
         switch (shadow) {
             case None -> ctx.text(font, text, x, y, 0xFFFFFFFF, false);
@@ -788,11 +760,6 @@ public final class DungeonMapRenderer {
         }
     }
 
-    /**
-     * Blits one of the map icons. The identifier is built with {@code tryParse} and the texture is
-     * resolved (and loaded if needed) up front: a bad asset path must never take the game down,
-     * which is what an uppercase path used to do.
-     */
     private static void blitIcon(GuiGraphicsExtractor ctx, String icon, int x, int y, int width, int height) {
         if (width <= 0 || height <= 0) return;
 
@@ -815,6 +782,5 @@ public final class DungeonMapRenderer {
         if (!WARNED.add(texture)) return;
         System.err.println("Frosty: invalid dungeon map texture path '" + texture + "'");
     }
-
 
 }

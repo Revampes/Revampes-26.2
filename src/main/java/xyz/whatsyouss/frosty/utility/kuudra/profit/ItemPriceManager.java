@@ -43,6 +43,13 @@ public final class ItemPriceManager {
         return INSTANCE;
     }
 
+    public boolean isBazaarReady() {
+        for (PriceProvider provider : providers) {
+            if (provider instanceof BazaarPriceProvider) return provider.isReady();
+        }
+        return false;
+    }
+
     public long getItemPrice(String itemId) {
         return Math.max(0L, Math.round(getPrice(itemId).orElse(0D)));
     }

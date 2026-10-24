@@ -2,12 +2,6 @@ package xyz.whatsyouss.frosty.utility.dungeon.map;
 
 import java.awt.Color;
 
-/**
- * Ported from devonian ({@code api/dungeon/DungeonPlayer.kt} — {@code DungeonClass}).
- *
- * <p>The per-class colour / colour-code settings of devonian were left behind; the defaults are
- * the ones its {@code Dungeon Colors} category ships with.
- */
 public enum DungeonClass {
     Archer("Arch", 'a', "§c", new Color(255, 85, 85, 255)),
     Berserk("Bers", 'b', "§6", new Color(255, 170, 0, 255)),

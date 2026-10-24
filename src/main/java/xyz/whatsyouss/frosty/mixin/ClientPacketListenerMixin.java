@@ -21,10 +21,6 @@ import xyz.whatsyouss.frosty.utility.dungeon.terminal.TerminalManager;
  * <p>This is only a same-tick fast path. Confirmation of queued clicks no longer depends on it:
  * {@code TerminalHandler} fingerprints the container while re-solving, so a menu mutated
  * locally (Odin's terminal simulator never sends these packets) is handled identically.
- *
- * <p>Also feeds the dungeon map: the map item's colours (rooms, doors, checkmarks, player icons)
- * are only final once the patch has been applied, and the action bar carries the per-room secret
- * count. Both are {@code TAIL} hooks for the same reason.
  */
 @Mixin(ClientPacketListener.class)
 public abstract class ClientPacketListenerMixin {

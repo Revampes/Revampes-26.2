@@ -16,16 +16,8 @@ import xyz.whatsyouss.frosty.utility.dungeon.map.FloorType;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * The on-screen dungeon map.
- *
- * <p>Devonian draws it as its own HUD feature with a private editor; here it is a normal
- * {@link HudWidget}, so it shows up in the mod's <em>Edit HUD</em> screen and can be dragged and
- * resized like every other element.
- */
 public class DungeonMapWidget extends HudWidget {
 
-    /** The element is a square, like devonian's fixed 100x100 (before the HUD scale). */
     private static final float BASE_SIZE = 100.0f;
 
     private final DungeonMap module;
@@ -92,13 +84,6 @@ public class DungeonMapWidget extends HudWidget {
                 Math.round(getY() + size / 2f - 4), 0xFFFFFFFF, true);
     }
 
-    /**
-     * Wraps the scanner's rooms into per-frame render data. The wrappers are cached so a room that
-     * did not change keeps its identity, which matters because the prediction is keyed on it.
-     *
-     * <p>The list keeps the scanner's indexing (empty slots stay {@code null}) because
-     * {@link DungeonMapRoomPrediction} looks rooms up by {@code Component#getRoomIdx()}.
-     */
     private List<DungeonMapRoomData> collectRooms() {
         List<DungeonMapRoomData> rooms = new ArrayList<>(DungeonScanner.rooms.length);
 

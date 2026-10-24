@@ -17,15 +17,6 @@ import java.util.regex.Pattern;
 
 import static xyz.whatsyouss.frosty.Frosty.mc;
 
-/**
- * Ported from devonian ({@code api/dungeon/Dungeons.kt}), trimmed down to what the map needs:
- * the floor, the "run started" / "in boss room" flags, the puzzle count used for the room type
- * prediction and the player list the markers are drawn from.
- *
- * <p>Devonian reads its tab list / scoreboard from dedicated events; this mod has neither, so the
- * same regexes are applied to {@link Utils#getTablist} and {@link Utils#getScoreboardSidebarLines}
- * once per client tick instead.
- */
 public final class DungeonTracker {
 
     private static final Pattern PLAYER_INFO = Pattern.compile(
@@ -35,7 +26,6 @@ public final class DungeonTracker {
     private static final Pattern BOSS_MESSAGE = Pattern.compile("^\\[BOSS] (.+?): (.+?)$");
     private static final Pattern ROOM_SECRETS = Pattern.compile("\\b(\\d+)/(\\d+) Secrets");
 
-    /** The bosses that put the run into the boss room (so the map can hide itself). */
     private static final List<String> BOSSES = List.of(
             "Bonzo", "Scarf", "The Professor", "Thorn", "Livid", "Sadan",
             "Maxor", "Storm", "Goldor", "Necron", "Wither King");
@@ -50,7 +40,6 @@ public final class DungeonTracker {
     public static final Map<String, DungeonPlayer> players = new LinkedHashMap<>();
     public static DungeonPlayer selfPlayer;
 
-    /** Set while the map module is on; the scanner hooks stay inert otherwise. */
     public static boolean active;
 
     private static boolean wasInDungeon;
@@ -62,8 +51,6 @@ public final class DungeonTracker {
 
     private DungeonTracker() {
     }
-
-    // ------------------------------------------------------------------ lifecycle
 
     public static void init() {
         reset();
@@ -96,12 +83,9 @@ public final class DungeonTracker {
         return new DungeonPlayer(name, info, DungeonClass.Unknown, 0, false);
     }
 
-    /** Called once per client tick while the map module is enabled. */
     public static void tick() {
         if (mc.level == null || mc.player == null) return;
 
-        // Every catacombs run is its own world, so a world change means the previous run is over:
-        // drop the old rooms right away instead of waiting to notice the player is out.
         if (mc.level != lastLevel) {
             lastLevel = mc.level;
             wasInDungeon = false;
@@ -112,9 +96,6 @@ public final class DungeonTracker {
         FloorType parsedFloor = parseFloor();
         if (parsedFloor != FloorType.None) floor = parsedFloor;
 
-        // The sidebar line "The Catacombs (F7)" only exists inside an actual run, but it disappears
-        // while the sidebar is rebuilt, so the tab list backs it up — and it is the tab list that
-        // tells the Dungeon Hub (where the map must not show) apart from the catacombs.
         boolean inDungeon = parsedFloor != FloorType.None || tabShowsCatacombs();
         if (!inDungeon) {
             if (wasInDungeon && ++outOfDungeonTicks > OUT_OF_DUNGEON_GRACE) {
@@ -147,13 +128,6 @@ public final class DungeonTracker {
         return FloorType.None;
     }
 
-    /**
-     * Fallback in-dungeon check for the ticks where the sidebar has not been (re)built yet.
-     *
-     * <p>{@link LocationUtils#isInDungeon()} cannot be used here: it matches any tab entry that
-     * contains {@code "Dungeon"}, which is also true in the Dungeon Hub, and that kept a finished
-     * run's map on screen.
-     */
     private static boolean tabShowsCatacombs() {
         if (mc.getConnection() == null) return false;
 
@@ -199,8 +173,6 @@ public final class DungeonTracker {
                 players.put(playerName, player);
             }
 
-            // A nick shows up as any name but our own; adopt the first parsed player as "self"
-            // so the marker keeps its head and the leap/name logic keeps working.
             if (players.size() > 1 && !scannedSelf) {
                 players.remove(selfPlayer.name);
                 player.profileInfo = selfPlayer.profileInfo;
@@ -258,9 +230,6 @@ public final class DungeonTracker {
         return total;
     }
 
-    // ------------------------------------------------------------------ hooks
-
-    /** Chat hook: only the two messages that change the map's behaviour are inspected. */
     public static void onChat(String rawMessage) {
         if (rawMessage == null) return;
         String message = Utils.stripColor(rawMessage).trim();
@@ -275,8 +244,7 @@ public final class DungeonTracker {
 
         String name = boss.group(1);
         if (!BOSSES.contains(name)) {
-            // The Watcher is the blood room, not the boss room: it gates "inBoss" for the other
-            // bosses and marks the blood door as cleared instead.
+
             if (name.equals("The Watcher") && boss.group(2).equals("You have proven yourself. You may pass.")) {
                 bloodCleared = true;
             }
@@ -287,10 +255,6 @@ public final class DungeonTracker {
         bloodCleared = true;
     }
 
-    /**
-     * Action bar hook (mixin on {@code ClientPacketListener#setActionBarText}): Hypixel prints
-     * {@code x/y Secrets} while inside a room, which is the only per-room secret progress source.
-     */
     public static void onActionBar(String rawMessage) {
         if (!active || rawMessage == null) return;
 
@@ -315,7 +279,6 @@ public final class DungeonTracker {
         return new ArrayList<>(players.values());
     }
 
-    /** Whether the last client tick found the player inside the catacombs. */
     public static boolean inDungeon() {
         return wasInDungeon;
     }

@@ -24,18 +24,8 @@ import java.util.Optional;
 
 import static xyz.whatsyouss.frosty.Frosty.mc;
 
-/**
- * Ported from devonian ({@code api/dungeon/DungeonScanner.kt}).
- *
- * <p>Walks the 6x6 component grid once the player is inside the catacombs and builds up
- * {@link DungeonRoom}s / {@link DungeonDoor}s from the world: the highest non-air block of a
- * component tells whether a room exists there at all, the block column in its centre identifies
- * the room ({@link #hashCeil}), and the neighbours are stitched on when the block between two
- * components is a doorway.
- */
 public final class DungeonScanner {
 
-    /** One entry of {@code assets/frosty/dungeons/rooms.json}. */
     public static final class RoomData {
         public String name;
         public String type;
@@ -59,7 +49,7 @@ public final class DungeonScanner {
     private static int worldChangeCooldown = 20;
     private static int foundEntrance = 20;
     private static boolean wasInEntrance;
-    /** Mirrors devonian's {@code EventBus.serverTicks()}, used to delay local explored updates. */
+
     public static long ticks;
 
     private DungeonScanner() {
@@ -84,8 +74,6 @@ public final class DungeonScanner {
         }
     }
 
-    // ------------------------------------------------------------------ world helpers
-
     public static boolean isChunkLoaded(int x, int z) {
         if (mc.level == null) return false;
         return mc.level.isLoaded(new BlockPos(x, 0, z));
@@ -101,7 +89,6 @@ public final class DungeonScanner {
         return BuiltInRegistries.BLOCK.getKey(block).toString();
     }
 
-    /** Legacy (1.8) numeric id of a block, {@code 0} when it is not mapped. */
     public static int getBlockId(Block block) {
         Integer id = LegacyRegistry.BLOCKS.get(registryName(block));
         return id == null ? 0 : id;
@@ -135,7 +122,6 @@ public final class DungeonScanner {
         return 0;
     }
 
-    /** Hashes the block column in the middle of a component; the result keys {@code rooms.json}. */
     public static int hashCeil(int x, int z) {
         StringBuilder builder = new StringBuilder();
 
@@ -154,8 +140,6 @@ public final class DungeonScanner {
 
         return builder.toString().hashCode();
     }
-
-    // ------------------------------------------------------------------ lifecycle
 
     private static List<WorldComponent> findAvailablePos() {
         List<WorldComponent> positions = new ArrayList<>();
@@ -179,7 +163,6 @@ public final class DungeonScanner {
         availablePos = new ArrayList<>(findAvailablePos().reversed());
     }
 
-    /** One scan tick; mirrors devonian's {@code TickEvent} handler. */
     public static void tick() {
         ticks++;
         if (--worldChangeCooldown >= 0) return;
@@ -213,7 +196,6 @@ public final class DungeonScanner {
             door.check();
         }
 
-
         DungeonRoom room = rooms[jdx];
         currentRoom = room;
         if (room != null) {
@@ -227,13 +209,11 @@ public final class DungeonScanner {
             }
         }
 
-
         if (lastIdx != null && lastIdx == jdx) return;
         lastIdx = jdx;
         if (currentRoom != null) DungeonTracker.currentRoom = currentRoom;
     }
 
-    /** Scans one available component; returns whether anything changed. */
     public static boolean scan() {
         foundEntrance--;
         if (availablePos.isEmpty()) return false;
@@ -262,7 +242,7 @@ public final class DungeonScanner {
                     addDoor(door);
                 }
             } else if (roofHeight <= 0) {
-                // nothing here
+
             } else {
                 DungeonRoom room = new DungeonRoom(new ArrayList<>(List.of(pos)), roofHeight).scan();
                 addRoom(comp, room);
@@ -326,8 +306,6 @@ public final class DungeonScanner {
 
         return availablePos.size() != startLen;
     }
-
-    // ------------------------------------------------------------------ room / door bookkeeping
 
     public static void addDoor(DungeonDoor door) {
         Component comp = door.comp.toComponent();
