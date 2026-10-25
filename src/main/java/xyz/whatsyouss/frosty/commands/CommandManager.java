@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CommandManager {
+    public static final String PREFIX = ";";
     public static List<Command> commands = new ArrayList<>();
 
     public static BindCommand bindCommand;

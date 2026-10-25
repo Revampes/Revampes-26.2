@@ -1,6 +1,7 @@
 package xyz.whatsyouss.frosty.commands.impl;
 
 import xyz.whatsyouss.frosty.commands.Command;
+import xyz.whatsyouss.frosty.commands.CommandManager;
 import xyz.whatsyouss.frosty.modules.Module;
 import xyz.whatsyouss.frosty.modules.ModuleManager;
 import xyz.whatsyouss.frosty.utility.Utils;
@@ -13,7 +14,7 @@ public class ToggleCommand extends Command {
     @Override
     public void execute(String[] args) {
         if (args.length < 1) {
-            sendError("Usage: .toggle <module>");
+            sendError("Usage: " + CommandManager.PREFIX + "toggle <module>");
             return;
         }
 

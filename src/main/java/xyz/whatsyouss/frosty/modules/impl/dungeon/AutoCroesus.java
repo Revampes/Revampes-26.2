@@ -98,7 +98,7 @@ public class AutoCroesus extends Module {
 
     @Override
     public String getDesc() {
-        return "Claims every Croesus chest in the dungeon hub and buys the most profitable one";
+        return "Claims every Croesus chest in the dungeon hub and buys the most profitable one *;ac go* to work";
     }
 
     public void start() {

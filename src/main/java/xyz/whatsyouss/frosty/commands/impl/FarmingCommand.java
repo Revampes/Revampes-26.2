@@ -2,6 +2,7 @@ package xyz.whatsyouss.frosty.commands.impl;
 
 import net.minecraft.world.phys.Vec3;
 import xyz.whatsyouss.frosty.commands.Command;
+import xyz.whatsyouss.frosty.commands.CommandManager;
 import xyz.whatsyouss.frosty.config.ConfigManager;
 import xyz.whatsyouss.frosty.modules.ModuleManager;
 import xyz.whatsyouss.frosty.modules.impl.farming.FarmingMacro;
@@ -23,7 +24,7 @@ public class FarmingCommand extends Command {
 
     private boolean requireEnabled() {
         if (!macro().isEnabled()) {
-            sendError("FarmingMacro must be enabled before using .fm commands");
+            sendError("FarmingMacro must be enabled before using " + CommandManager.PREFIX + "fm commands");
             return false;
         }
         return true;
@@ -107,7 +108,7 @@ public class FarmingCommand extends Command {
     private void cmdInsert(String[] args) {
         if (!requireEnabled() || !requireGarden()) return;
         if (args.length < 2) {
-            sendError("Usage: .fm insert <index>");
+            sendError("Usage: " + CommandManager.PREFIX + "fm insert <index>");
             return;
         }
 
@@ -150,7 +151,7 @@ public class FarmingCommand extends Command {
     private void cmdDelete(String[] args) {
         if (!requireEnabled()) return;
         if (args.length < 2) {
-            sendError("Usage: .fm delete <index>");
+            sendError("Usage: " + CommandManager.PREFIX + "fm delete <index>");
             return;
         }
 
@@ -188,7 +189,7 @@ public class FarmingCommand extends Command {
     private void cmdSave(String[] args) {
         if (!requireEnabled()) return;
         if (args.length < 2) {
-            sendError("Usage: .fm save <name>");
+            sendError("Usage: " + CommandManager.PREFIX + "fm save <name>");
             return;
         }
 
@@ -210,7 +211,7 @@ public class FarmingCommand extends Command {
     private void cmdLoad(String[] args) {
         if (!requireEnabled()) return;
         if (args.length < 2) {
-            sendError("Usage: .fm load <name>");
+            sendError("Usage: " + CommandManager.PREFIX + "fm load <name>");
             return;
         }
 
@@ -249,7 +250,8 @@ public class FarmingCommand extends Command {
         int count = wps.size();
         wps.clear();
         Utils.addChatMessage("§cUnloaded all §f" + count + " §cwaypoints. Waypoint list is now empty");
-        Utils.addChatMessage("§eYou can reload a saved configuration with .fm load <name> or .fm add for new save");
+        Utils.addChatMessage("§eYou can reload a saved configuration with " + CommandManager.PREFIX
+                + "fm load <name> or " + CommandManager.PREFIX + "fm add for new save");
     }
 
 
@@ -314,6 +316,7 @@ public class FarmingCommand extends Command {
     }
 
     private void printUsage() {
-        Utils.addChatMessage("§eUsage: .fm <add|remove|insert <index>|delete <index>|save <name>|load <name>|unload|start <index>|stop>|poslist");
+        Utils.addChatMessage("§eUsage: " + CommandManager.PREFIX
+                + "fm <add|remove|insert <index>|delete <index>|save <name>|load <name>|unload|start <index>|stop>|poslist");
     }
 }

@@ -1,5 +1,6 @@
 package xyz.whatsyouss.frosty.modules.impl.client;
 
+import xyz.whatsyouss.frosty.commands.CommandManager;
 import xyz.whatsyouss.frosty.modules.Module;
 
 public class Commands extends Module {
@@ -10,8 +11,8 @@ public class Commands extends Module {
     @Override
     public String getDesc() {
         if (UI.lang.getValue() == 1) {
-            return "客户端指令 (.help)";
+            return "客户端指令 (" + CommandManager.PREFIX + "help)";
         }
-        return "Client commands (.help)";
+        return "Client commands (" + CommandManager.PREFIX + "help)";
     }
 }

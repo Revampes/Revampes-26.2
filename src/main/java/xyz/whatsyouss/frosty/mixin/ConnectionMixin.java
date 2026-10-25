@@ -52,8 +52,8 @@ public abstract class ConnectionMixin {
         }
         if (packet instanceof ServerboundChatPacket && ModuleManager.commands.isEnabled()) {
             String message = ((ServerboundChatPacket) packet).message();
-            if (message.startsWith(".")) {
-                handleCommand(message.substring(1));
+            if (message.startsWith(CommandManager.PREFIX)) {
+                handleCommand(message.substring(CommandManager.PREFIX.length()));
                 ci.cancel();
             }
         }

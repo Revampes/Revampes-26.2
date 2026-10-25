@@ -19,7 +19,8 @@ public class HelpCommand extends Command {
         }
         Utils.addChatMessage("==============================");
         for (Command c : CommandManager.getCommands()) {
-            mc.player.sendSystemMessage(Component.literal("§b." + c.getName() + "  §7---  " + c.getDescription() + " - (§b." + c.getAliases() + "§7)"));
+            mc.player.sendSystemMessage(Component.literal("§b" + CommandManager.PREFIX + c.getName()
+                    + "  §7---  " + c.getDescription() + " - (§b" + CommandManager.PREFIX + c.getAliases() + "§7)"));
         }
         Utils.addChatMessage("==============================");
     }

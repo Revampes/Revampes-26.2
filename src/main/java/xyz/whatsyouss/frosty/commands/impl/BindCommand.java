@@ -2,6 +2,7 @@ package xyz.whatsyouss.frosty.commands.impl;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import xyz.whatsyouss.frosty.commands.Command;
+import xyz.whatsyouss.frosty.commands.CommandManager;
 import xyz.whatsyouss.frosty.modules.Module;
 import xyz.whatsyouss.frosty.modules.ModuleManager;
 import xyz.whatsyouss.frosty.utility.Utils;
@@ -14,7 +15,7 @@ public class BindCommand extends Command {
     @Override
     public void execute(String[] args) {
         if (args.length < 2) {
-            sendError("Usage: .bind <module> <key>");
+            sendError("Usage: " + CommandManager.PREFIX + "bind <module> <key>");
             return;
         }
 

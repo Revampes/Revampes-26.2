@@ -1,6 +1,7 @@
 package xyz.whatsyouss.frosty.commands.impl;
 
 import xyz.whatsyouss.frosty.commands.Command;
+import xyz.whatsyouss.frosty.commands.CommandManager;
 import xyz.whatsyouss.frosty.modules.ModuleManager;
 import xyz.whatsyouss.frosty.modules.impl.dungeon.AutoCroesus;
 import xyz.whatsyouss.frosty.utility.dungeon.croesus.CroesusData;
@@ -57,6 +58,7 @@ public class AutoCroesusCommand extends Command {
     }
 
     private void sendUsage() {
-        AutoCroesus.modMessage("Usage: .ac <go|forcego|alwaysbuy|worthless> [sbId|reset]");
+        AutoCroesus.modMessage("Usage: " + CommandManager.PREFIX
+                + "ac <go|forcego|alwaysbuy|worthless> [sbId|reset]");
     }
 }
