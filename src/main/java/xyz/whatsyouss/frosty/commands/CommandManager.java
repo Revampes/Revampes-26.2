@@ -1,10 +1,14 @@
 package xyz.whatsyouss.frosty.commands;
 
-import xyz.whatsyouss.frosty.commands.impl.*;
-import xyz.whatsyouss.frosty.modules.Module;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import xyz.whatsyouss.frosty.commands.impl.BindCommand;
+import xyz.whatsyouss.frosty.commands.impl.FarmingCommand;
+import xyz.whatsyouss.frosty.commands.impl.HelpCommand;
+import xyz.whatsyouss.frosty.commands.impl.ItemCommand;
+import xyz.whatsyouss.frosty.commands.impl.PosCommand;
+import xyz.whatsyouss.frosty.commands.impl.ToggleCommand;
 
 public class CommandManager {
     public static final String PREFIX = ";";
@@ -16,7 +20,7 @@ public class CommandManager {
     public static PosCommand posCommand;
     public static ToggleCommand toggleCommand;
     public static FarmingCommand farmingCommand;
-    public static AutoCroesusCommand autoCroesusCommand;
+    // public static AutoCroesusCommand autoCroesusCommand;
 
     public void register() {
         this.addCommand(bindCommand = new BindCommand());
@@ -25,7 +29,7 @@ public class CommandManager {
         this.addCommand(posCommand = new PosCommand());
         this.addCommand(toggleCommand = new ToggleCommand());
         this.addCommand(farmingCommand = new FarmingCommand());
-        this.addCommand(autoCroesusCommand = new AutoCroesusCommand());
+        // this.addCommand(autoCroesusCommand = new AutoCroesusCommand());
     }
 
     public void addCommand(Command m) {
