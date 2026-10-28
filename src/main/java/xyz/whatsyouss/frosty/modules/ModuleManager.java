@@ -7,6 +7,7 @@ import java.util.List;
 import xyz.whatsyouss.frosty.modules.impl.client.Cape;
 import xyz.whatsyouss.frosty.modules.impl.client.ChatCopier;
 import xyz.whatsyouss.frosty.modules.impl.client.Commands;
+import xyz.whatsyouss.frosty.modules.impl.client.DiscordPresence;
 import xyz.whatsyouss.frosty.modules.impl.client.Title;
 import xyz.whatsyouss.frosty.modules.impl.client.UI;
 import xyz.whatsyouss.frosty.modules.impl.client.UngrabMouse;
@@ -94,6 +95,7 @@ import xyz.whatsyouss.frosty.modules.impl.render.ScrollableTooltips;
 import xyz.whatsyouss.frosty.modules.impl.render.StarredMobESP;
 import xyz.whatsyouss.frosty.modules.impl.render.TPS;
 import xyz.whatsyouss.frosty.modules.impl.render.blockanimation.BlockAnimation;
+import xyz.whatsyouss.frosty.modules.impl.dungeon.AutoCroesus;
 import xyz.whatsyouss.frosty.settings.Setting;
 
 public class ModuleManager {
@@ -133,6 +135,7 @@ public class ModuleManager {
     public static NoOverlay noOverlay;
     public static NoBlur noBlur;
     public static Title title;
+    public static DiscordPresence discordPresence;
     public static Commands commands;
     public static WoodNuker woodNuker;
     public static MoveFix moveFix;
@@ -202,6 +205,8 @@ public class ModuleManager {
     public static KuudraPhaseAlert kuudraPhaseAlert;
     public static KuudraProfit kuudraProfit;
     public static DarkMode darkMode;
+    public static AutoCroesus autoCroesus;
+
     public void register() {
         this.addModule(tps = new TPS());
         this.addModule(guiMove = new GuiMove());
@@ -236,6 +241,7 @@ public class ModuleManager {
         this.addModule(noOverlay = new NoOverlay());
         this.addModule(noBlur = new NoBlur());
         this.addModule(title = new Title());
+        this.addModule(discordPresence = new DiscordPresence());
         this.addModule(commands = new Commands());
         this.addModule(woodNuker = new WoodNuker());
         this.addModule(moveFix = new MoveFix());
@@ -301,6 +307,7 @@ public class ModuleManager {
         this.addModule(kuudraProfit = new KuudraProfit());
         this.addModule(commissionMacro = new CommissionMacro());
         this.addModule(darkMode = new DarkMode());
+        this.addModule(autoCroesus = new AutoCroesus());
         modules.sort(Comparator.comparing(Module::getName));
     }
 
@@ -394,6 +401,6 @@ public class ModuleManager {
     }
 
     public static boolean isDangerousModule(Module m) {
-        return m instanceof Velocity || m instanceof Fly;
+        return m instanceof Velocity || m instanceof Fly || m instanceof AutoCroesus;
     }
 }
