@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "xyz.whatsyouss.frosty.mixin",
+  "package": "xyz.revampes.Revamp.mixin",
   "compatibilityLevel": "JAVA_25",
   "refmap": "frosty.mixins.refmap.json",
   "mixins": [

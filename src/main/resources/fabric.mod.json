@@ -16,7 +16,7 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"xyz.whatsyouss.frosty.Frosty"
+			"xyz.revampes.Revamp.Frosty"
 		]
 	},
 	"mixins": [

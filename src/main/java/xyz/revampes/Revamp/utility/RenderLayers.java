@@ -1,0 +1,112 @@
+package xyz.revampes.Revamp.utility;
+
+import java.util.function.Function;
+
+import net.minecraft.client.renderer.rendertype.LayeringTransform;
+import net.minecraft.client.renderer.rendertype.OutputTarget;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Util;
+
+public enum RenderLayers
+{
+    ;
+
+    /**
+     * Similar to {link RenderType#getLines()}, but with line width 2.
+     */
+    public static final RenderType LINES = RenderType.create("frosty:lines",
+            RenderSetup.builder(ShaderPipelines.DEPTH_TEST_LINES)
+                    .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
+                    .setOutputTarget(OutputTarget.ITEM_ENTITY_TARGET)
+                    .createRenderSetup());
+
+    /**
+     * Similar to {link RenderType#getLines()}, but with line width 2 and no
+     * depth test.
+     */
+    public static final RenderType ESP_LINES =
+            RenderType.create("frosty:esp_lines",
+                    RenderSetup.builder(ShaderPipelines.ESP_LINES)
+                            .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
+                            .setOutputTarget(OutputTarget.ITEM_ENTITY_TARGET)
+                            .createRenderSetup());
+
+    /**
+     * Similar to {link RenderType#getDebugQuads()}, but with culling enabled.
+     */
+    public static final RenderType QUADS = RenderType.create("frosty:quads",
+            RenderSetup.builder(ShaderPipelines.QUADS).sortOnUpload()
+                    .createRenderSetup());
+
+    /**
+     * Similar to {link RenderType#getDebugQuads()}, but with culling enabled
+     * and no depth test.
+     */
+    public static final RenderType ESP_QUADS = RenderType.create(
+            "frosty:esp_quads", RenderSetup.builder(ShaderPipelines.ESP_QUADS)
+                    .sortOnUpload().createRenderSetup());
+
+    /**
+     * Similar to {link RenderType#getDebugQuads()}, but with no depth test.
+     */
+    public static final RenderType ESP_QUADS_NO_CULLING =
+            RenderType.create("frosty:esp_quads_no_culling",
+                    RenderSetup.builder(ShaderPipelines.ESP_QUADS_NO_CULLING)
+                            .sortOnUpload().useLightmap().createRenderSetup());
+
+    /**
+     * Unordered triangle list with culling disabled, mirroring IQAddons' circle fill layers.
+     */
+    public static final RenderType TRIANGLES = RenderType.create("frosty:triangles",
+            RenderSetup.builder(ShaderPipelines.WORLD_TRIANGLES)
+                    .sortOnUpload().createRenderSetup());
+
+    /**
+     * Same as {@link #TRIANGLES}, but with no depth test.
+     */
+    public static final RenderType ESP_TRIANGLES = RenderType.create("frosty:esp_triangles",
+            RenderSetup.builder(ShaderPipelines.ESP_WORLD_TRIANGLES)
+                    .sortOnUpload().createRenderSetup());
+
+    private static final Function<Identifier, RenderType> ENTITY_TRANSLUCENT_NO_DEPTH =            Util.memoize(texture -> RenderType.create("frosty:entity_translucent_no_depth",
+                    RenderSetup.builder(ShaderPipelines.ENTITY_TRANSLUCENT_NO_DEPTH)
+                            .withTexture("Sampler0", texture)
+                            .useLightmap()
+                            .useOverlay()
+                            .sortOnUpload()
+                            .createRenderSetup()));
+
+    /**
+     * Returns either {@link #QUADS} or {@link #ESP_QUADS} depending on the
+     * value of {@code depthTest}.
+     */
+    public static RenderType getQuads(boolean depthTest)
+    {
+        return depthTest ? QUADS : ESP_QUADS;
+    }
+
+    /**
+     * Returns either {@link #LINES} or {@link #ESP_LINES} depending on the
+     * value of {@code depthTest}.
+     */
+    public static RenderType getLines(boolean depthTest)
+    {
+        return depthTest ? LINES : ESP_LINES;
+    }
+
+    /**
+     * Returns either {@link #TRIANGLES} or {@link #ESP_TRIANGLES} depending on the
+     * value of {@code depthTest}.
+     */
+    public static RenderType getTriangles(boolean depthTest)
+    {
+        return depthTest ? TRIANGLES : ESP_TRIANGLES;
+    }
+
+    public static RenderType entityTranslucentNoDepth(Identifier texture)
+    {
+        return ENTITY_TRANSLUCENT_NO_DEPTH.apply(texture);
+    }
+}

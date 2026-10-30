@@ -19,9 +19,9 @@ Supporting pieces ported once: `Module.category.Dungeon`, `settings/impl/ColorSe
 
 ## How to add another fork module one-by-one
 1. Find the fork file under `..\Frosty-master\src\main\java\com\revampes\Fault\modules\impl\...`.
-2. Copy it into `src/main/java/xyz/whatsyouss/frosty/modules/impl/<category>/`, then:
-   - Rewrite `package com.revampes.Fault...` â†’ `package xyz.whatsyouss.frosty...`.
-   - Rewrite imports from `com.revampes.Fault.*` â†’ `xyz.whatsyouss.frosty.*`.
+2. Copy it into `src/main/java/xyz/revampes/Revamp/modules/impl/<category>/`, then:
+   - Rewrite `package com.revampes.Fault...` â†’ `package xyz.revampes.Revamp...`.
+   - Rewrite imports from `com.revampes.Fault.*` â†’ `xyz.revampes.Revamp.*`.
    - Map removed/changed 26.2 API (see the checklist below).
 3. If any module-specific utility/setting/event/mixin is missing from the base, port it
    the same way (prefer the base's existing class when one exists â€” e.g. use the base's
@@ -179,30 +179,30 @@ instead of `ItemStack` metadata, and a click is only safe to send as `ContainerI
 
 `modules/impl/dungeon/DungeonMap` ports
 [Synnerz/devonian](https://github.com/Synnerz/devonian/tree/26.3/src/main/kotlin/com/github/synnerz/devonian/features/dungeons/map)
-(GPL-3.0, same licence as this project) — the Catacombs map with room types, secrets,
+(GPL-3.0, same licence as this project) ï¿½ the Catacombs map with room types, secrets,
 checkmarks, door types, room type prediction and player markers.
 
 ### Where everything lives
-- `utility/dungeon/map/DungeonScanner` — devonian's `DungeonScanner`: walks the 6x6 component
+- `utility/dungeon/map/DungeonScanner` ï¿½ devonian's `DungeonScanner`: walks the 6x6 component
   grid inside the dungeon, finds rooms from the highest non-air block of a component, stitches
   neighbours onto the same room when the block between them is a doorway, and identifies a room
   by hashing the block column in its centre (`hashCeil`) against `assets/frosty/dungeons/rooms.json`.
-- `utility/dungeon/map/LegacyRegistry` — the 1.8.9 block id table the hash needs (Hypixel's rooms
+- `utility/dungeon/map/LegacyRegistry` ï¿½ the 1.8.9 block id table the hash needs (Hypixel's rooms
   were built with those ids). Registry names are unchanged in 26.2, so devonian's table is used
   as-is.
-- `utility/dungeon/map/DungeonMapScanner` — devonian's `DungeonMapScanner`: decodes the dungeon
+- `utility/dungeon/map/DungeonMapScanner` ï¿½ devonian's `DungeonMapScanner`: decodes the dungeon
   map item (room colours, centre pixel = checkmark, door gaps, map decorations = everyone's
   position and facing). This is what gives the map its live state; the world scan gives names,
   shapes and secret totals.
-- `utility/dungeon/map/DungeonTracker` — the part of devonian's `Dungeons` object the map needs
+- `utility/dungeon/map/DungeonTracker` ï¿½ the part of devonian's `Dungeons` object the map needs
   (`floor`, `inBoss`, `started`, puzzle count, player list / classes). Devonian gets these from
   tab-update / scoreboard / action-bar events; this mod has none of those events, so the same
   regexes run against `Utils.getTablist` + `Utils.getScoreboardSidebarLines` once per tick, and
   `mixin/ClientPacketListenerMixin` feeds the action bar (`x/y Secrets`) and the map item packet.
-- `utility/dungeon/map/DungeonMapRenderer` + `DungeonMapOptions` + `DungeonMapRoomPrediction` —
+- `utility/dungeon/map/DungeonMapRenderer` + `DungeonMapOptions` + `DungeonMapRoomPrediction` ï¿½
   the rendering and the room type prediction.
-- `hud/impl/DungeonMapWidget` — the on-screen element.
-- `assets/frosty/dungeons/` — `rooms.json` plus devonian's checkmark / puzzle / marker textures,
+- `hud/impl/DungeonMapWidget` ï¿½ the on-screen element.
+- `assets/frosty/dungeons/` ï¿½ `rooms.json` plus devonian's checkmark / puzzle / marker textures,
   copied verbatim.
 
 ### Deviations from the source
@@ -238,4 +238,4 @@ they are only drawn where a module sets a group, so every other module looks unc
 (`greenCheck.png`, `checks/vanillaNew/...`). They are stored lowercased here
 (`greencheck.png`, `checks/vanillanew/...`) and `DungeonMapRenderer` builds every icon path with
 `Identifier.tryParse`, skipping (and logging once) instead of throwing. An uppercase path in a
-render call is a hard crash, not a missing texture — that is what "Render Checkmarks" used to do.
+render call is a hard crash, not a missing texture ï¿½ that is what "Render Checkmarks" used to do.
