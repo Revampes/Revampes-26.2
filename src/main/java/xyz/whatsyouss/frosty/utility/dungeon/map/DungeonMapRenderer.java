@@ -16,6 +16,7 @@ import xyz.whatsyouss.frosty.utility.dungeon.map.DungeonPositions.WorldComponent
 
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -313,7 +314,7 @@ public final class DungeonMapRenderer {
                 case Shape1x1 -> {
                     Component comp = cells.get(0).toComponent();
                     List<RoomType> predictions =
-                            comp.equals(data.predictedAt) ? data.predictedTypes : null;
+                            options.showPredictions && comp.equals(data.predictedAt) ? data.predictedTypes : null;
                     int cx = cells.get(0).cx() / 2;
                     int cz = cells.get(0).cz() / 2;
                     int[] bounds = roomBounds(ox, oy, compToPx, roomRectOffset, options, cx, cz, 1, 1);
@@ -442,11 +443,9 @@ public final class DungeonMapRenderer {
                 && (room.type == RoomType.PUZZLE ? options.puzzleName : options.roomName)
                 && (!options.roomCheckGreen || room.checkmark != CheckmarkType.GREEN);
 
-        String icon = checkmarkIcon(options, room, renderName);
-        if (icon == null && renderRoomInfo && options.puzzleIcon && room.name != null) {
-            icon = SPECIAL_ROOMS.get(room.name);
-            if (icon != null) icon = "puzzles/" + icon;
-        }
+        String icon = puzzleIcon(options, room, renderRoomInfo);
+        boolean puzzleIconShown = icon != null;
+        if (icon == null) icon = checkmarkIcon(options, room, renderName);
 
         if (icon == null
                 && options.renderCheckIf0Secret
@@ -458,7 +457,8 @@ public final class DungeonMapRenderer {
         }
 
         List<String> text = new ArrayList<>();
-        if (renderName && room.name != null) {
+        // The icon already identifies the puzzle, so the name would only collide with it.
+        if (renderName && room.name != null && !puzzleIconShown) {
             String colorCode = options.colorRoomName ? nameColorCode(room) : "";
             for (String word : room.name.replace("\u200B", "- ").split(" ")) {
                 text.add(colorCode + word);
@@ -515,6 +515,18 @@ public final class DungeonMapRenderer {
         }
 
         pose.popMatrix();
+    }
+
+    /**
+     * Puzzle rooms are identified by an icon instead of a name, so the icon wins over the
+     * checkmark: a checkmark icon would otherwise hide it as soon as the room gets checked.
+     */
+    private static String puzzleIcon(DungeonMapOptions options, DungeonRoom room, boolean renderRoomInfo) {
+        if (!options.puzzleIcon || !renderRoomInfo) return null;
+        if (room.type != RoomType.PUZZLE || room.name == null) return null;
+
+        String file = SPECIAL_ROOMS.get(room.name.trim());
+        return file == null ? null : "puzzles/" + file;
     }
 
     private static String checkmarkIcon(DungeonMapOptions options, DungeonRoom room, boolean renderName) {
@@ -629,14 +641,17 @@ public final class DungeonMapRenderer {
         boolean holdingLeap = isHoldingLeap();
         boolean renderNames = options.renderNames && (!options.namesRequireLeap || holdingLeap);
 
-        int idx = players.size();
-        for (int p = players.size() - 1; p >= 0; p--) {
-            DungeonPlayer player = players.get(p);
-            int i = --idx;
+        // The local player is drawn last so their marker is never hidden behind a teammate.
+        List<DungeonPlayer> ordered = new ArrayList<>(players);
+        ordered.sort(Comparator.comparingInt(player -> isSelf(player) ? 1 : 0));
+
+        for (DungeonPlayer player : ordered) {
             if (player.isDead) continue;
 
             PlayerComponent pos = player.getLerpedPosition();
             if (pos == null) continue;
+
+            boolean isSelf = isSelf(player);
 
             float px = (float) MapMath.rescale(pos.x(), 0, maxDim * 2.0,
                     ox, ox + maxDim * compToPx);
@@ -644,7 +659,7 @@ public final class DungeonMapRenderer {
                     oy, oy + maxDim * compToPx);
 
             boolean hasHead = options.usePlayerHeads && player.profileInfo != null;
-            boolean isHead = hasHead && (!options.useMarkerSelf || i > 0);
+            boolean isHead = hasHead && (!options.useMarkerSelf || !isSelf);
 
             float size;
             float maxDy;
@@ -675,7 +690,7 @@ public final class DungeonMapRenderer {
             if (isHead) {
                 drawHead(ctx, player, -size * 0.5f, -height * 0.5f, size, height);
             } else {
-                blitAtlas(ctx, i == 0 ? MARKER_SELF : MARKER_OTHER, -size * 0.5f, -height * 0.5f, size, height, -1);
+                blitAtlas(ctx, isSelf ? MARKER_SELF : MARKER_OTHER, -size * 0.5f, -height * 0.5f, size, height, -1);
             }
 
             pose.popMatrix();
@@ -701,6 +716,13 @@ public final class DungeonMapRenderer {
             drawText(ctx, font, line, 0, 0, options.stringShadow);
             namePose.popMatrix();
         }
+    }
+
+    private static boolean isSelf(DungeonPlayer player) {
+        if (mc.player != null && mc.player.getName().getString().equals(player.name)) return true;
+
+        DungeonPlayer self = DungeonTracker.selfPlayer;
+        return self != null && (self == player || self.name.equals(player.name));
     }
 
     private static boolean isHoldingLeap() {

@@ -93,6 +93,7 @@ public class DungeonMapOptions {
     public boolean puzzleName;
     public boolean colorRoomName;
     public boolean renderUnknownRooms;
+    public boolean showPredictions = true;
     public boolean dungeonStarted;
 
     public double iconSize = 0.6;

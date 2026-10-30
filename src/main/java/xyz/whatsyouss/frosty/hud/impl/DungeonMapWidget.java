@@ -16,22 +16,46 @@ import xyz.whatsyouss.frosty.utility.dungeon.map.FloorType;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * The dungeon map. Two instances are registered: the regular one, which follows the
+ * "Show Hidden Rooms" setting, and the legal one, which always renders the map the way the
+ * in-game map shows it (no hidden rooms, no predictions) so it can be shown on stream while
+ * the regular map keeps the extra information.
+ *
+ * <p>Both are separate widgets on purpose: the HUD editor lets the player park them wherever
+ * they like, including next to each other or on a different monitor region.
+ */
 public class DungeonMapWidget extends HudWidget {
 
     private static final float BASE_SIZE = 100.0f;
+    private static final float LEGAL_DEFAULT_X = 116.0f;
 
     private final DungeonMap module;
+    private final boolean legal;
     private final DungeonMapRoomData[] roomCache = new DungeonMapRoomData[DungeonScanner.rooms.length];
 
     public DungeonMapWidget(DungeonMap module) {
-        super("dungeonMap", "Dungeon Map", 8.0f, 8.0f, 1.0f);
+        this(module, false);
+    }
+
+    public DungeonMapWidget(DungeonMap module, boolean legal) {
+        super(legal ? "dungeonMapLegal" : "dungeonMap",
+                legal ? "Dungeon Map (Legal)" : "Dungeon Map",
+                legal ? LEGAL_DEFAULT_X : 8.0f, 8.0f, 1.0f);
         this.module = module;
+        this.legal = legal;
+    }
+
+    public boolean isLegal() {
+        return legal;
     }
 
     @Override
     public boolean isVisible() {
         if (!module.isEnabled()) return false;
         if (!DungeonTracker.inDungeon()) return false;
+        // The legal map is only drawn as a second map next to the real one.
+        if (legal && (!module.renderLegalMap.isToggled() || !module.showHiddenRooms.isToggled())) return false;
         return !DungeonTracker.inBoss || module.showInBoss.isToggled();
     }
 
@@ -63,10 +87,10 @@ public class DungeonMapWidget extends HudWidget {
     private void drawMap(GuiGraphicsExtractor context, Font font, boolean live) {
         if (live && !isVisible()) return;
 
-        DungeonMapOptions options = module.buildOptions();
+        DungeonMapOptions options = module.buildOptions(legal, getScale());
         List<DungeonMapRoomData> rooms = collectRooms();
 
-        if (module.predictRooms.isToggled() && DungeonTracker.started) {
+        if (!legal && options.showPredictions && module.predictRooms.isToggled() && DungeonTracker.started) {
             FloorType floor = DungeonTracker.floor == FloorType.None ? FloorType.M7 : DungeonTracker.floor;
             DungeonMapRoomPrediction.analyzeRooms(rooms, DungeonScanner.doors, floor,
                     options.renderUnknownRooms, DungeonTracker.totalPuzzles);
@@ -78,7 +102,7 @@ public class DungeonMapWidget extends HudWidget {
 
         if (!rooms.isEmpty()) return;
 
-        String label = "Dungeon Map";
+        String label = legal ? "Dungeon Map (Legal)" : "Dungeon Map";
         int width = font.width(label);
         context.text(font, label, Math.round(getX() + size / 2f - width / 2f),
                 Math.round(getY() + size / 2f - 4), 0xFFFFFFFF, true);

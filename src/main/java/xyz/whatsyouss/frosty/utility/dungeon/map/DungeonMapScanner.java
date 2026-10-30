@@ -156,8 +156,20 @@ public final class DungeonMapScanner {
     }
 
     private static void updatePlayerIcons(MapItemSavedData data) {
-        List<DungeonPlayer> players = new ArrayList<>(DungeonTracker.players.values());
-        if (players.isEmpty()) return;
+        FloorType floor = DungeonTracker.floor;
+        if (floor == FloorType.None) return;
+        if (roomGap <= 0) return;
+
+        // Hypixel does not send a decoration for the local player, so the decoration list maps
+        // onto the rest of the party in tab-list order.
+        List<DungeonPlayer> teammates = new ArrayList<>();
+        for (DungeonPlayer player : DungeonTracker.players.values()) {
+            if (player == DungeonTracker.selfPlayer || player.isDead || player.isDisconnected) continue;
+            // Players we can see client side are tracked from their entity, which is both more
+            // accurate and keeps the marker from jumping between the two position sources.
+            if (player.entity != null && !player.entity.isRemoved()) continue;
+            teammates.add(player);
+        }
 
         List<MapDecoration> decorations = new ArrayList<>();
         for (MapDecoration decoration : data.getDecorations()) {
@@ -167,31 +179,21 @@ public final class DungeonMapScanner {
             decorations.add(decoration);
         }
 
-        FloorType floor = DungeonTracker.floor;
-        if (floor == FloorType.None) return;
+        if (teammates.isEmpty() || decorations.isEmpty()) return;
 
-        int alive = 0;
-        for (DungeonPlayer player : players) if (!player.isDead) alive++;
-        if (alive != decorations.size()) return;
-
-        Iterator<DungeonPlayer> iterator = players.iterator();
-        iterator.next();
-
-        for (MapDecoration decoration : decorations) {
-            if (!iterator.hasNext()) return;
-
-            DungeonPlayer player = iterator.next();
-            while (player.isDisconnected) {
-                if (!iterator.hasNext()) return;
-                player = iterator.next();
-            }
+        // Tolerate a count mismatch: a teammate dying or leaving can leave a stale decoration
+        // behind for a moment, and bailing out here used to drop every marker on the map.
+        int count = Math.min(decorations.size(), teammates.size());
+        for (int i = 0; i < count; i++) {
+            MapDecoration decoration = decorations.get(i);
+            DungeonPlayer player = teammates.get(i);
 
             double x = MapMath.rescale(
-                    (decoration.x() + 126.0) * 0.5,
+                    (decoration.x() + 128.0) * 0.5,
                     mapOffsetX, mapOffsetX + roomGap * floor.roomsW,
                     0.0, floor.roomsW * 2.0);
             double z = MapMath.rescale(
-                    (decoration.y() + 126.0) * 0.5,
+                    (decoration.y() + 128.0) * 0.5,
                     mapOffsetZ, mapOffsetZ + roomGap * floor.roomsH,
                     0.0, floor.roomsH * 2.0);
             double r = -Math.toRadians(decoration.rot() / 16.0 * 360.0 + 90.0);
@@ -269,6 +271,13 @@ public final class DungeonMapScanner {
                 } else {
                     room.checkmark = CheckmarkType.NONE;
                 }
+            }
+
+            // A green check means every secret in the room has been found, so trust it even when
+            // the action bar never reported the count (or the room data has no secret total).
+            if (room.checkmark == CheckmarkType.GREEN && room.totalSecrets > 0
+                    && room.secretsCompleted != room.totalSecrets) {
+                room.secretsCompleted = room.totalSecrets;
             }
         }
 

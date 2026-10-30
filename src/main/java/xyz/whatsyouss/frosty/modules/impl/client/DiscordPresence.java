@@ -1,13 +1,5 @@
 package xyz.whatsyouss.frosty.modules.impl.client;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import xyz.whatsyouss.frosty.Frosty;
-import xyz.whatsyouss.frosty.modules.Module;
-import xyz.whatsyouss.frosty.settings.impl.ButtonSetting;
-import xyz.whatsyouss.frosty.utility.LocationUtils;
-import xyz.whatsyouss.frosty.utility.Utils;
-
 import java.awt.Desktop;
 import java.net.URI;
 import java.util.List;
@@ -16,9 +8,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+
+import xyz.whatsyouss.frosty.Frosty;
+import xyz.whatsyouss.frosty.modules.Module;
+import xyz.whatsyouss.frosty.settings.impl.ButtonSetting;
+import xyz.whatsyouss.frosty.utility.LocationUtils;
+import xyz.whatsyouss.frosty.utility.Utils;
+
 public class DiscordPresence extends Module {
     private static final String APPLICATION_ID = "1564567419337449552";
-    private static final String REPOSITORY_URL = "https://github.com/WhatsYouss/Frosty";
+    private static final String REPOSITORY_URL = "https://github.com/Revampes/Revampes-26.2";
     private static final String DOWNLOAD_URL = REPOSITORY_URL + "/releases/latest";
 
     public final ButtonSetting repository;

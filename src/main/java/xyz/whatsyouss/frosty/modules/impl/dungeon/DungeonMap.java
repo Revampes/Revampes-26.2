@@ -31,6 +31,7 @@ public class DungeonMap extends Module {
     private static final String MARKERS = "Markers";
 
     private final DungeonMapWidget widget = new DungeonMapWidget(this);
+    private final DungeonMapWidget legalWidget = new DungeonMapWidget(this, true);
 
     public final ButtonSetting renderPlayerHeads = add(new ButtonSetting("Render Player Heads", true), MARKERS);
     public final ButtonSetting useMarkerSelf = add(new ButtonSetting("Use Marker for Self", true), MARKERS);
@@ -56,7 +57,7 @@ public class DungeonMap extends Module {
     public final SelectSetting iconStyle = add(new SelectSetting("Icon Style", 0,
             new String[]{"IllegalMap", "NEU", "Vanilla New", "Vanilla Old"}), STYLE);
     public final SelectSetting iconAlignment = add(new SelectSetting("Icon Alignment",
-            DungeonMapOptions.RoomInfoAlignment.Center.ordinal(),
+            DungeonMapOptions.RoomInfoAlignment.TopLeft.ordinal(),
             DungeonMapOptions.RoomInfoAlignment.displayNames()), STYLE);
     public final SelectSetting textAlignment = add(new SelectSetting("Text Alignment",
             DungeonMapOptions.RoomInfoAlignment.CenterL.ordinal(),
@@ -66,7 +67,7 @@ public class DungeonMap extends Module {
     public final ButtonSetting colorRoomText = add(new ButtonSetting("Color Room Name", true), STYLE);
 
     public final ButtonSetting renderCheckmark = add(new ButtonSetting("Render Checkmarks", false), BEHAVIOR);
-    public final ButtonSetting renderPuzzleIcon = add(new ButtonSetting("Render Puzzle Icon", false), BEHAVIOR);
+    public final ButtonSetting renderPuzzleIcon = add(new ButtonSetting("Render Puzzle Icon", true), BEHAVIOR);
     public final ButtonSetting renderPuzzleName = add(new ButtonSetting("Render Puzzle Name", true), BEHAVIOR);
     public final ButtonSetting renderRoomNames = add(new ButtonSetting("Render Room Names", true), BEHAVIOR);
     public final ButtonSetting namesNotEntranceFairyBlood =
@@ -88,6 +89,11 @@ public class DungeonMap extends Module {
             add(new ButtonSetting("Predict Room Types", true), BEHAVIOR);
 
     public final ButtonSetting showHiddenRooms = add(new ButtonSetting("Show Hidden Rooms", false), BEHAVIOR);
+    /**
+     * Draws a second, stream safe map next to the regular one whenever hidden rooms are shown.
+     * It is a HUD widget of its own, so it can be placed anywhere.
+     */
+    public final ButtonSetting renderLegalMap = add(new ButtonSetting("Render Legal Map Too", true), BEHAVIOR);
 
     public final ColorSetting backgroundColor =
             add(new ColorSetting("Map Background Color", new Color(1577189633, true)), COLORS);
@@ -141,6 +147,7 @@ public class DungeonMap extends Module {
     public DungeonMap() {
         super("DungeonMap", category.Dungeon);
         HudManager.register(widget);
+        HudManager.register(legalWidget);
     }
 
     private <T extends Setting> T add(T setting, String group) {
@@ -151,6 +158,10 @@ public class DungeonMap extends Module {
 
     public DungeonMapWidget getWidget() {
         return widget;
+    }
+
+    public DungeonMapWidget getLegalWidget() {
+        return legalWidget;
     }
 
     @Override
@@ -181,12 +192,20 @@ public class DungeonMap extends Module {
     }
 
     public DungeonMapOptions buildOptions() {
+        return buildOptions(false, widget.getScale());
+    }
+
+    /**
+     * @param legal when {@code true} the options describe the stream safe map: no hidden rooms
+     *              and no predicted room types, i.e. only what the in-game map already shows.
+     */
+    public DungeonMapOptions buildOptions(boolean legal, float hudScale) {
         DungeonMapOptions options = new DungeonMapOptions();
 
         options.roomWidth = roomSize.getInput();
         options.doorWidth = doorSize.getInput();
         options.padding = mapPadding.getInput();
-        options.border = (int) Math.ceil(mapBorder.getInput() * widget.getScale());
+        options.border = (int) Math.ceil(mapBorder.getInput() * hudScale);
         options.iconStyle = (int) iconStyle.getValue();
         options.iconSize = iconSize.getInput();
         options.textSize = textSize.getInput();
@@ -207,7 +226,8 @@ public class DungeonMap extends Module {
         options.no1Secret = dontRenderSecret1.isToggled();
         options.renderCheckIf0Secret = renderCheckIf0.isToggled();
         options.colorRoomName = colorRoomText.isToggled();
-        options.renderUnknownRooms = showHiddenRooms.isToggled();
+        options.renderUnknownRooms = !legal && showHiddenRooms.isToggled();
+        options.showPredictions = !legal;
         options.dungeonStarted = DungeonTracker.started;
         options.unknownRoomsDarkenFactor = hiddenRoomDarken.getInput();
         options.rotate = rotate.isToggled();
@@ -342,7 +362,7 @@ public class DungeonMap extends Module {
         renderPlayerHeads.setEnabled(true);
         useMarkerSelf.setEnabled(true);
         renderRoomNames.setEnabled(true);
-        renderPuzzleIcon.setEnabled(false);
+        renderPuzzleIcon.setEnabled(true);
         renderPuzzleName.setEnabled(true);
         normalDoorDynamic.setEnabled(false);
         dontRenderFairyCheck.setEnabled(false);

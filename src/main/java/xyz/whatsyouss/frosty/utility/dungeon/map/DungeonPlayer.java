@@ -58,6 +58,9 @@ public class DungeonPlayer {
         double time = System.nanoTime() * 1.0e-6;
         double frame = (time - updateTime) / (updateTime - lastUpdateTime);
         if (Double.isNaN(frame) || Double.isInfinite(frame)) frame = 1.0;
+        // Never extrapolate past the newest sample, otherwise markers run ahead of the player
+        // while the next position update is still in flight.
+        frame = MapMath.clamp(frame, 0.0, 1.0);
 
         return new PlayerComponent(
                 lerp(frame, lastPos.x(), pos.x()),

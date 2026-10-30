@@ -19,12 +19,18 @@ import static xyz.whatsyouss.frosty.Frosty.mc;
 
 public final class DungeonTracker {
 
+    /**
+     * Dungeon tab list entry, e.g. {@code [31] [MVP+] Name (Mage XL)}. The rank tags in front of
+     * the name are optional, may repeat and contain characters such as {@code +}, so they are
+     * matched as any bracketed group instead of a list of known ranks.
+     */
     private static final Pattern PLAYER_INFO = Pattern.compile(
-            "^\\[\\d+] (?:\\[YOUTUBE] )?(\\w+)(?:.+?)? \\((\\w+) ?([0IVXLCDM]+)?\\)$");
+            "^\\[(\\d+)] (?:\\[[^\\]]+] )*(\\w+) .*?\\((\\w+)(?: (\\w+))*\\)$");
     private static final Pattern FLOOR = Pattern.compile("The Catacombs \\((\\w+)\\)");
     private static final Pattern PUZZLES_COUNT = Pattern.compile("Puzzles: \\((\\d+)\\)");
     private static final Pattern BOSS_MESSAGE = Pattern.compile("^\\[BOSS] (.+?): (.+?)$");
-    private static final Pattern ROOM_SECRETS = Pattern.compile("\\b(\\d+)/(\\d+) Secrets");
+    private static final Pattern SECRET_WORD = Pattern.compile("(?i)secret");
+    private static final Pattern SECRET_FRACTION = Pattern.compile("(\\d{1,3})\\s*/\\s*(\\d{1,3})");
 
     private static final List<String> BOSSES = List.of(
             "Bonzo", "Scarf", "The Professor", "Thorn", "Livid", "Sadan",
@@ -43,11 +49,13 @@ public final class DungeonTracker {
     public static boolean active;
 
     private static boolean wasInDungeon;
-    private static boolean scannedSelf;
     private static DungeonRoom lastSecretRoom;
+    private static long lastSecretRoomAt;
     private static Object lastLevel;
     private static int outOfDungeonTicks;
     private static final int OUT_OF_DUNGEON_GRACE = 20;
+    /** Mirrors IllegalMap: the action bar keeps the previous room's count for a moment. */
+    private static final long ROOM_CHANGE_GRACE_MS = 1500L;
 
     private DungeonTracker() {
     }
@@ -64,7 +72,7 @@ public final class DungeonTracker {
         totalPuzzles = 0;
         currentRoom = null;
         lastSecretRoom = null;
-        scannedSelf = false;
+        lastSecretRoomAt = 0L;
         DungeonScanner.reset();
         DungeonMapScanner.reset();
         resetPlayers();
@@ -74,11 +82,14 @@ public final class DungeonTracker {
         players.clear();
 
         selfPlayer = createSelf();
-        players.put(selfPlayer.name, selfPlayer);
+        if (selfPlayer.name != null && !selfPlayer.name.isEmpty()) {
+            players.put(selfPlayer.name, selfPlayer);
+        }
     }
 
     private static DungeonPlayer createSelf() {
-        String name = mc.getGameProfile() == null ? "" : mc.getGameProfile().name();
+        String name = selfName();
+        if (name == null) name = "";
         PlayerInfo info = mc.getConnection() == null ? null : mc.getConnection().getPlayerInfo(name);
         return new DungeonPlayer(name, info, DungeonClass.Unknown, 0, false);
     }
@@ -114,7 +125,7 @@ public final class DungeonTracker {
 
         updateTab();
         updatePlayerEntities();
-        if (selfPlayer != null) selfPlayer.tick();
+        for (DungeonPlayer player : players.values()) player.tick();
 
         DungeonScanner.tick();
     }
@@ -146,6 +157,8 @@ public final class DungeonTracker {
     private static void updateTab() {
         if (mc.getConnection() == null) return;
 
+        String selfName = selfName();
+
         for (PlayerInfo info : new ArrayList<>(mc.getConnection().getOnlinePlayers())) {
             Component display = info.getTabListDisplayName();
             String name = display != null ? display.getString()
@@ -163,22 +176,25 @@ public final class DungeonTracker {
             Matcher matcher = PLAYER_INFO.matcher(line);
             if (!matcher.find()) continue;
 
-            String playerName = matcher.group(1);
-            String role = matcher.group(2);
-            String level = matcher.group(3);
+            String playerName = matcher.group(2);
+            String role = matcher.group(3);
+            String level = matcher.group(4);
 
             DungeonPlayer player = players.get(playerName);
             if (player == null) {
                 player = new DungeonPlayer(playerName, info, DungeonClass.Unknown, 0, false);
                 players.put(playerName, player);
             }
+            if (player.profileInfo == null) player.profileInfo = info;
 
-            if (players.size() > 1 && !scannedSelf) {
-                players.remove(selfPlayer.name);
-                player.profileInfo = selfPlayer.profileInfo;
+            // The placeholder created by reset() already carries our own name, so this normally
+            // just adopts the parsed entry. Matching by name keeps us from mistaking the first
+            // party member the tab list happens to show for the local player.
+            if (selfName != null && selfName.equalsIgnoreCase(playerName) && selfPlayer != player) {
+                DungeonPlayer previous = selfPlayer;
                 selfPlayer = player;
+                if (previous != null) players.remove(previous.name);
             }
-            scannedSelf = true;
 
             if ("DEAD".equals(role)) {
                 player.isDead = true;
@@ -193,16 +209,22 @@ public final class DungeonTracker {
         }
     }
 
-    private static void updatePlayerEntities() {
-        for (AbstractClientPlayer entity : mc.level.players()) {
-            PlayerInfo info = mc.getConnection() == null ? null : mc.getConnection().getPlayerInfo(entity.getUUID());
-            if (info == null || info.getLatency() == -1) continue;
+    private static String selfName() {
+        if (mc.player != null) return mc.player.getName().getString();
+        return mc.getGameProfile() == null ? null : mc.getGameProfile().name();
+    }
 
+    private static void updatePlayerEntities() {
+        if (mc.level == null) return;
+
+        for (AbstractClientPlayer entity : mc.level.players()) {
             DungeonPlayer player = players.get(entity.getName().getString());
             if (player == null) continue;
 
             player.entity = entity;
-            if (player.profileInfo == null) player.profileInfo = info;
+            if (player.profileInfo == null && mc.getConnection() != null) {
+                player.profileInfo = mc.getConnection().getPlayerInfo(entity.getUUID());
+            }
         }
     }
 
@@ -258,19 +280,46 @@ public final class DungeonTracker {
     public static void onActionBar(String rawMessage) {
         if (!active || rawMessage == null) return;
 
-        DungeonRoom room = currentRoom;
-        if (room == null || room.totalSecrets <= 0) return;
+        DungeonRoom room = DungeonScanner.currentRoom != null ? DungeonScanner.currentRoom : currentRoom;
+        if (room == null) return;
+
+        String plain = Utils.stripColor(rawMessage);
+        boolean mentionsSecrets = SECRET_WORD.matcher(plain).find();
+
+        int found = -1;
+        int total = -1;
+        Matcher matcher = SECRET_FRACTION.matcher(plain);
+        while (matcher.find()) {
+            int candidateFound = Integer.parseInt(matcher.group(1));
+            int candidateTotal = Integer.parseInt(matcher.group(2));
+            if (candidateTotal <= 0) continue;
+
+            // Prefer the fraction whose total matches the room we are standing in, so the
+            // scoreboard/other counters on the bar cannot be mistaken for the secret count.
+            if (room.totalSecrets > 0 && candidateTotal == room.totalSecrets) {
+                found = candidateFound;
+                total = candidateTotal;
+                break;
+            }
+            if (found < 0 && mentionsSecrets) {
+                found = candidateFound;
+                total = candidateTotal;
+            }
+        }
+        if (found < 0) return;
+
+        // The action bar trails a room change by a message or two and would otherwise write the
+        // previous room's count onto the room we just walked into.
+        long now = System.currentTimeMillis();
         if (room != lastSecretRoom) {
             lastSecretRoom = room;
+            lastSecretRoomAt = now;
             return;
         }
+        if (now - lastSecretRoomAt < ROOM_CHANGE_GRACE_MS) return;
 
-        Matcher matcher = ROOM_SECRETS.matcher(Utils.stripColor(rawMessage));
-        if (!matcher.find()) return;
-
-        int found = Integer.parseInt(matcher.group(1));
-        int total = Integer.parseInt(matcher.group(2));
-        if (found > room.totalSecrets || total != room.totalSecrets) return;
+        if (room.totalSecrets <= 0) room.totalSecrets = total;
+        if (found > room.totalSecrets) return;
 
         room.secretsCompleted = found;
     }
