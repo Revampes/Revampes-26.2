@@ -29,6 +29,7 @@ public class DungeonMapWidget extends HudWidget {
 
     private static final float BASE_SIZE = 100.0f;
     private static final float LEGAL_DEFAULT_X = 116.0f;
+    private static boolean FAILURE_REPORTED;
 
     private final DungeonMap module;
     private final boolean legal;
@@ -87,6 +88,16 @@ public class DungeonMapWidget extends HudWidget {
     private void drawMap(GuiGraphicsExtractor context, Font font, boolean live) {
         if (live && !isVisible()) return;
 
+        try {
+            draw(context, font);
+        } catch (Exception e) {
+            // A single bad frame must not take the whole HUD down with it; log it once so the
+            // map silently vanishing leaves a trace in the log.
+            reportFailure(e);
+        }
+    }
+
+    private void draw(GuiGraphicsExtractor context, Font font) {
         DungeonMapOptions options = module.buildOptions(legal, getScale());
         List<DungeonMapRoomData> rooms = collectRooms();
 
@@ -106,6 +117,14 @@ public class DungeonMapWidget extends HudWidget {
         int width = font.width(label);
         context.text(font, label, Math.round(getX() + size / 2f - width / 2f),
                 Math.round(getY() + size / 2f - 4), 0xFFFFFFFF, true);
+    }
+
+    private static void reportFailure(Exception e) {
+        if (!FAILURE_REPORTED) {
+            FAILURE_REPORTED = true;
+            System.err.println("Revampes: dungeon map render failed: " + e);
+            e.printStackTrace();
+        }
     }
 
     private List<DungeonMapRoomData> collectRooms() {

@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import xyz.revampes.Revamp.modules.ModuleManager;
 import xyz.revampes.Revamp.modules.impl.dungeon.BetterTerminal;
+import xyz.revampes.Revamp.modules.impl.dungeon.LeapMenu;
 
 /**
  * Better Terminal has to suppress the chest texture here rather than in
@@ -29,8 +30,15 @@ public abstract class ContainerScreenMixin {
     private void frosty$beforeBackground(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         frosty$backgroundScaled = false;
 
-        BetterTerminal module = ModuleManager.betterTerminal;
         ContainerScreen screen = (ContainerScreen) (Object) this;
+
+        LeapMenu leapMenu = ModuleManager.leapMenu;
+        if (leapMenu != null && leapMenu.hidesVanillaChest(screen)) {
+            ci.cancel();
+            return;
+        }
+
+        BetterTerminal module = ModuleManager.betterTerminal;
         if (module == null) return;
 
         if (module.hidesVanillaChest(screen)) {
@@ -54,3 +62,4 @@ public abstract class ContainerScreenMixin {
         context.pose().popMatrix();
     }
 }
+

@@ -18,7 +18,9 @@ import xyz.revampes.Revamp.modules.impl.dungeon.AutoGFS;
 import xyz.revampes.Revamp.modules.impl.dungeon.BetterTerminal;
 import xyz.revampes.Revamp.modules.impl.dungeon.DungeonMap;
 import xyz.revampes.Revamp.modules.impl.dungeon.KeyHighlight;
+import xyz.revampes.Revamp.modules.impl.dungeon.LeapMenu;
 import xyz.revampes.Revamp.modules.impl.dungeon.MobHighlight;
+import xyz.revampes.Revamp.modules.impl.testing.TestLeapMenu;
 import xyz.revampes.Revamp.modules.impl.farming.CropNuker;
 import xyz.revampes.Revamp.modules.impl.farming.FarmingMacro;
 import xyz.revampes.Revamp.modules.impl.farming.FarmingProtector;
@@ -183,6 +185,8 @@ public class ModuleManager {
     public static BlockAnimation blockAnimation;
     public static BetterTerminal betterTerminal;
     public static DungeonMap dungeonMap;
+    public static LeapMenu leapMenu;
+    public static TestLeapMenu testLeapMenu;
 
     public static AutoSell autoSell;
 
@@ -286,6 +290,8 @@ public class ModuleManager {
         this.addModule(blockAnimation = new BlockAnimation());
         this.addModule(betterTerminal = new BetterTerminal());
         this.addModule(dungeonMap = new DungeonMap());
+        this.addModule(leapMenu = new LeapMenu());
+        this.addModule(testLeapMenu = new TestLeapMenu());
         this.addModule(autoSell = new AutoSell());
         this.addModule(supplySwap = new SupplySwap());
         this.addModule(supplyPickupAura = new SupplyPickupAura());

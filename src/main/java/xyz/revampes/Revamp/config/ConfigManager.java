@@ -218,7 +218,11 @@ public class ConfigManager {
                     } else if (setting instanceof MultiSelectSetting) {
                         settingsObject.addProperty(setting.getName(),
                                 String.join(",", ((MultiSelectSetting) setting).getSelectedNames()));
-                    } else if (setting instanceof ButtonSetting && !(setting instanceof KeyBindSetting)) {
+                    } else if (setting instanceof KeyBindSetting keybind) {
+                        if (keybind.isStandalone()) {
+                            settingsObject.addProperty(setting.getName(), keybind.getKeycode());
+                        }
+                    } else if (setting instanceof ButtonSetting) {
                         settingsObject.addProperty(setting.getName(), ((ButtonSetting) setting).isToggled());
                     } else if (setting instanceof InputSetting) {
                         settingsObject.addProperty(setting.getName(), ((InputSetting) setting).getValue());
@@ -281,7 +285,12 @@ public class ConfigManager {
                     } else if (setting instanceof MultiSelectSetting multi) {
                         String raw = settingsObject.get(setting.getName()).getAsString();
                         multi.setSelectedNames(raw.isEmpty() ? List.of() : List.of(raw.split(",")));
-                    } else if (setting instanceof ButtonSetting && !(setting instanceof KeyBindSetting)) {
+                    } else if (setting instanceof KeyBindSetting keybind) {
+                        // Module binds are stored as "keybind" above; only extra binds live in settings.
+                        if (keybind.isStandalone()) {
+                            keybind.setKeycode(settingsObject.get(setting.getName()).getAsInt());
+                        }
+                    } else if (setting instanceof ButtonSetting) {
                         ((ButtonSetting) setting).setEnabled(settingsObject.get(setting.getName()).getAsBoolean());
                     } else if (setting instanceof InputSetting) {
                         ((InputSetting) setting).setValue(settingsObject.get(setting.getName()).getAsString());

@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -74,7 +75,25 @@ public final class HudManager {
             if (!widget.isPositionInitialized()) {
                 widget.applyDefaultPosition(font);
             }
+            keepOnScreen(widget);
         }
+    }
+
+    /**
+     * A layout saved on a bigger window or at a smaller GUI scale can leave a widget entirely
+     * off screen, which looks exactly like the widget silently disappearing. Always keep at
+     * least a corner reachable.
+     */
+    private static void keepOnScreen(HudWidget widget) {
+        Window window = Minecraft.getInstance().getWindow();
+        if (window == null) return;
+
+        float limitX = Math.max(-2.0f, window.getGuiScaledWidth() - 8.0f);
+        float limitY = Math.max(-2.0f, window.getGuiScaledHeight() - 8.0f);
+
+        float x = Math.clamp(widget.getX(), -2.0f, limitX);
+        float y = Math.clamp(widget.getY(), -2.0f, limitY);
+        if (x != widget.getX() || y != widget.getY()) widget.setPosition(x, y);
     }
 
     public static HudWidget topmostAt(double mouseX, double mouseY, Font font) {

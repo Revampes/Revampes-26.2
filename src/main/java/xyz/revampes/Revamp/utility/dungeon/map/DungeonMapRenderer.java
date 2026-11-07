@@ -2,6 +2,7 @@ package xyz.revampes.Revamp.utility.dungeon.map;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
@@ -272,7 +273,6 @@ public final class DungeonMapRenderer {
             boolean renderRoomInfo = true;
 
             if (!room.explored && !options.renderUnknownRooms) {
-                shape = ShapeType.Shape1x1;
                 cells = new ArrayList<>();
                 for (WorldComponent comp : room.comps) {
                     int cx = comp.cx();
@@ -287,14 +287,12 @@ public final class DungeonMapRenderer {
 
             if (cells.isEmpty()) continue;
 
-            if (shape == ShapeType.Shape2x2 && cells.size() != 4) shape = ShapeType.ShapeL;
-            if (shape == ShapeType.ShapeL && cells.size() != 3) {
-                shape = switch (cells.size()) {
-                    case 1 -> ShapeType.Shape1x1;
-                    case 2 -> ShapeType.Shape1x2;
-                    default -> ShapeType.ShapeL;
-                };
-            }
+            // The visible cells can be fewer than the room's real shape (an unexplored room only
+            // shows the cells behind a door we have already opened), so the shape has to be
+            // derived from the cells we are actually going to draw. Leaving it at Shape1x2/1x3
+            // used to index past the end of this list and abort the whole map render.
+            shape = shapeOf(cells);
+            if (shape == ShapeType.Unknown) continue;
 
             switch (shape) {
                 case ShapeL -> {
@@ -354,12 +352,19 @@ public final class DungeonMapRenderer {
                     WorldComponent corner = cells.stream()
                             .min((a, b) -> Integer.compare(a.cx() + a.cz(), b.cx() + b.cz()))
                             .orElse(cells.get(0));
-                    int cx1 = cells.get(0).cx();
-                    int cx2 = cells.get(1).cx();
-                    int w = cx1 == cx2 ? 1 : cells.size();
-                    int h = cx1 == cx2 ? cells.size() : 1;
-                    drawRoom(ctx, ox, oy, compToPx, roomRectOffset, options, corner.cx() / 2, corner.cz() / 2,
-                            w, h, color);
+                    boolean sameColumn = cells.stream().allMatch(cell -> cell.cx() == corner.cx());
+                    boolean sameRow = cells.stream().allMatch(cell -> cell.cz() == corner.cz());
+
+                    if (sameColumn || sameRow) {
+                        int w = sameColumn ? 1 : cells.size();
+                        int h = sameColumn ? cells.size() : 1;
+                        drawRoom(ctx, ox, oy, compToPx, roomRectOffset, options, corner.cx() / 2, corner.cz() / 2,
+                                w, h, color);
+                    } else {
+                        // Hidden rooms only reveal the cells behind a door we opened, which can be
+                        // a few scattered cells instead of a straight line.
+                        drawSeparateCells(ctx, ox, oy, compToPx, roomRectOffset, options, cells, color);
+                    }
                 }
                 case Shape2x2 -> {
                     WorldComponent corner = cells.stream()
@@ -375,6 +380,24 @@ public final class DungeonMapRenderer {
             drawRoomInfo(ctx, font, options, room, cells, shape, ox, oy, compToPx,
                     iconSizeComp, textScale, renderRoomInfo);
         }
+    }
+
+    /**
+     * Shape of exactly the cells that will be drawn. Mirrors {@link DungeonRoom#shape()} but is
+     * applied to the filtered list, so callers can rely on the cell count matching the shape.
+     */
+    private static ShapeType shapeOf(List<WorldComponent> cells) {
+        if (cells.isEmpty() || cells.size() > 4) return ShapeType.Unknown;
+
+        int distinctX = (int) cells.stream().mapToInt(WorldComponent::cx).distinct().count();
+        int distinctZ = (int) cells.stream().mapToInt(WorldComponent::cz).distinct().count();
+
+        return switch (cells.size()) {
+            case 1 -> ShapeType.Shape1x1;
+            case 2 -> ShapeType.Shape1x2;
+            case 3 -> distinctX == 3 || distinctZ == 3 ? ShapeType.Shape1x3 : ShapeType.ShapeL;
+            default -> distinctX == 1 || distinctZ == 1 ? ShapeType.Shape1x4 : ShapeType.Shape2x2;
+        };
     }
 
     private static int[] roomBounds(float ox, float oy, float compToPx, float roomRectOffset,
@@ -395,6 +418,26 @@ public final class DungeonMapRenderer {
                                  DungeonMapOptions options, int x, int z, int w, int h, int color) {
         int[] bounds = roomBounds(ox, oy, compToPx, roomRectOffset, options, x, z, w, h);
         ctx.fill(bounds[0], bounds[1], bounds[0] + bounds[2], bounds[1] + bounds[3], color);
+    }
+
+    /** Draws every cell on its own plus the connections between orthogonally touching cells. */
+    private static void drawSeparateCells(GuiGraphicsExtractor ctx, float ox, float oy, float compToPx,
+                                          float roomRectOffset, DungeonMapOptions options,
+                                          List<WorldComponent> cells, int color) {
+        for (WorldComponent cell : cells) {
+            drawRoom(ctx, ox, oy, compToPx, roomRectOffset, options, cell.cx() / 2, cell.cz() / 2, 1, 1, color);
+        }
+        for (int i = 0; i < cells.size(); i++) {
+            for (int j = i + 1; j < cells.size(); j++) {
+                int cx1 = cells.get(i).cx() / 2;
+                int cz1 = cells.get(i).cz() / 2;
+                int cx2 = cells.get(j).cx() / 2;
+                int cz2 = cells.get(j).cz() / 2;
+                if (Math.abs(cx1 - cx2) + Math.abs(cz1 - cz2) == 1) {
+                    drawJoined(ctx, ox, oy, compToPx, roomRectOffset, options, cx1, cz1, cx2, cz2, color);
+                }
+            }
+        }
     }
 
     private static void drawJoined(GuiGraphicsExtractor ctx, float ox, float oy, float compToPx,
@@ -525,8 +568,10 @@ public final class DungeonMapRenderer {
         if (!options.puzzleIcon || !renderRoomInfo) return null;
         if (room.type != RoomType.PUZZLE || room.name == null) return null;
 
-        String file = SPECIAL_ROOMS.get(room.name.trim());
-        return file == null ? null : "puzzles/" + file;
+        // Room names can carry zero width spaces, and the texture needs its full file name: a
+        // missing ".png" made every puzzle icon resolve to a non existent texture.
+        String file = SPECIAL_ROOMS.get(room.name.replace("\u200B", "").trim());
+        return file == null ? null : "puzzles/" + file + ".png";
     }
 
     private static String checkmarkIcon(DungeonMapOptions options, DungeonRoom room, boolean renderName) {
@@ -597,7 +642,7 @@ public final class DungeonMapRenderer {
                 return new float[]{best.cx() / 2f + 0.5f, best.cz() / 2f + 0.5f};
             }
             default -> {
-                if (shape == ShapeType.ShapeL) {
+                if (shape == ShapeType.ShapeL && cells.size() >= 3) {
                     List<WorldComponent> sorted = new ArrayList<>(cells);
                     sorted.sort((a, b) -> Integer.compare(a.cx() + a.cz() * 11, b.cx() + b.cz() * 11));
 
@@ -646,7 +691,7 @@ public final class DungeonMapRenderer {
         ordered.sort(Comparator.comparingInt(player -> isSelf(player) ? 1 : 0));
 
         for (DungeonPlayer player : ordered) {
-            if (player.isDead) continue;
+            if (player.isDead || player.isDisconnected) continue;
 
             PlayerComponent pos = player.getLerpedPosition();
             if (pos == null) continue;
@@ -738,22 +783,23 @@ public final class DungeonMapRenderer {
         var skin = player.profileInfo.getSkin();
         if (skin == null || skin.body() == null) return;
 
-        Identifier texture = skin.body().texturePath();
-        int w = Math.round(width);
-        int h = Math.round(height);
-
+        // Use the vanilla face extractor: it samples the head and the hat overlay with the right
+        // UVs, so the icon cannot end up sampling an unrelated part of the skin texture.
+        int size = Math.max(1, Math.round(Math.min(width, height)));
         try {
-            ctx.blit(RenderPipelines.GUI_TEXTURED, texture, Math.round(x), Math.round(y),
-                    8f, 8f, w, h, 8, 8, 64, 64, -1);
-            ctx.blit(RenderPipelines.GUI_TEXTURED, texture, Math.round(x), Math.round(y),
-                    40f, 8f, w, h, 8, 8, 64, 64, -1);
+            PlayerFaceExtractor.extractRenderState(ctx, skin, Math.round(x), Math.round(y), size);
         } catch (Exception e) {
-            warnOnce(texture.toString());
+            warnOnce(skin.body().texturePath().toString());
         }
     }
 
     private static void blitAtlas(GuiGraphicsExtractor ctx, float[] uv, float x, float y, float width, float height,
                                   int color) {
+        if (!textureAvailable(MARKER_ATLAS)) {
+            warnOnce(MARKER_ATLAS.toString());
+            return;
+        }
+
         try {
             ctx.blit(RenderPipelines.GUI_TEXTURED, MARKER_ATLAS,
                     Math.round(x), Math.round(y),
@@ -786,7 +832,7 @@ public final class DungeonMapRenderer {
         if (width <= 0 || height <= 0) return;
 
         Identifier texture = Identifier.tryParse("frosty:dungeons/map/" + icon);
-        if (texture == null) {
+        if (texture == null || !textureAvailable(texture)) {
             warnOnce("frosty:dungeons/map/" + icon);
             return;
         }
@@ -798,11 +844,22 @@ public final class DungeonMapRenderer {
         }
     }
 
+    /** Guards against silently blitting the missing texture checkerboard when an asset is absent. */
+    private static boolean textureAvailable(Identifier texture) {
+        if (AVAILABLE_TEXTURES.contains(texture)) return true;
+        if (mc.getResourceManager() == null) return true;
+        if (mc.getResourceManager().getResource(texture).isEmpty()) return false;
+
+        AVAILABLE_TEXTURES.add(texture);
+        return true;
+    }
+
+    private static final java.util.Set<Identifier> AVAILABLE_TEXTURES = new java.util.HashSet<>();
     private static final java.util.Set<String> WARNED = new java.util.HashSet<>();
 
     private static void warnOnce(String texture) {
         if (!WARNED.add(texture)) return;
-        System.err.println("Frosty: invalid dungeon map texture path '" + texture + "'");
+        System.err.println("Revampes: missing dungeon map texture '" + texture + "'");
     }
 
 }

@@ -17,7 +17,6 @@ import xyz.revampes.Revamp.settings.impl.ColorSetting;
 import xyz.revampes.Revamp.settings.impl.InputSetting;
 import xyz.revampes.Revamp.settings.impl.SelectSetting;
 import xyz.revampes.Revamp.settings.impl.SliderSetting;
-import xyz.revampes.Revamp.utility.RenderUtils;
 import xyz.revampes.Revamp.utility.dungeon.terminal.ExponentialSmooth;
 import xyz.revampes.Revamp.utility.dungeon.terminal.SlotRenderInfo;
 import xyz.revampes.Revamp.utility.dungeon.terminal.SlotType;
@@ -25,6 +24,7 @@ import xyz.revampes.Revamp.utility.dungeon.terminal.TerminalColors;
 import xyz.revampes.Revamp.utility.dungeon.terminal.TerminalHandler;
 import xyz.revampes.Revamp.utility.dungeon.terminal.TerminalManager;
 import xyz.revampes.Revamp.utility.dungeon.terminal.TerminalType;
+import xyz.revampes.Revamp.utility.render.RoundedRects;
 
 import java.awt.Color;
 import java.util.List;
@@ -74,6 +74,10 @@ public class BetterTerminal extends Module {
     private static final int COLOR_NON_QUEUE = 0xFFFA5252;
     private static final int COLOR_RELOAD = 0xFFFAB005;
     private static final int COLOR_NONE = 0x00000000;
+
+    /** Panel drop shadow, matching yqloss' {@code GUIBackground} (blur 2, dark). */
+    private static final float PANEL_SHADOW_BLUR = 2.0f;
+    private static final int PANEL_SHADOW_COLOR = 0x70000000;
 
     // ------------------------------------------------------------------ settings
 
@@ -477,11 +481,16 @@ public class BetterTerminal extends Module {
         }
 
         if (backgroundEnabled.isToggled()) {
-            RenderUtils.drawRoundedRect(ctx,
+            float radius = (float) backgroundRadius.getInput();
+            // yqloss draws the panel as a blurred box shadow with a rounded fill on top.
+            RoundedRects.shadow(ctx,
                     ttx + PANEL_OFFSET_X, tty + PANEL_OFFSET_Y,
                     PANEL_WIDTH, panelHeight,
-                    (float) backgroundRadius.getInput(),
-                    backgroundColor.getRGB());
+                    radius, PANEL_SHADOW_BLUR, PANEL_SHADOW_COLOR);
+            RoundedRects.fill(ctx,
+                    ttx + PANEL_OFFSET_X, tty + PANEL_OFFSET_Y,
+                    PANEL_WIDTH, panelHeight,
+                    radius, backgroundColor.getRGB());
         }
 
         drawTitle(ctx, ttx, tty, handler, bx, by, smooth);
@@ -532,17 +541,29 @@ public class BetterTerminal extends Module {
         }
     }
 
-    private void drawCell(GuiGraphicsExtractor ctx, float x, float y, double size, int argb) {
+    /**
+     * One animated cell. The press scale is applied to the pose and not to the rectangle itself,
+     * so the shrink stays sub pixel smooth instead of snapping through whole pixels.
+     */
+    private void drawCell(GuiGraphicsExtractor ctx, float left, float top, double size, int argb) {
         if ((argb >>> 24) == 0) return;
 
-        float half = SLOT_SIZE / 2.0f;
-        float halfScaled = (float) (half * size);
-        float left = x + half - halfScaled;
-        float top = y + half - halfScaled;
+        float centerX = left + SLOT_SIZE / 2.0f;
+        float centerY = top + SLOT_SIZE / 2.0f;
         float radius = (float) cornerRadius.getInput();
 
-        RenderUtils.drawRoundedRect(ctx, left, top, halfScaled * 2.0f, halfScaled * 2.0f,
-                radius, argb);
+        Matrix3x2fStack pose = ctx.pose();
+        boolean scaled = Math.abs(size - 1.0) > 0.0005;
+        if (scaled) {
+            pose.pushMatrix();
+            pose.translate(centerX, centerY);
+            pose.scale((float) size, (float) size);
+            pose.translate(-centerX, -centerY);
+        }
+
+        RoundedRects.fill(ctx, left, top, SLOT_SIZE, SLOT_SIZE, radius, argb);
+
+        if (scaled) pose.popMatrix();
     }
 
     private void drawTitle(GuiGraphicsExtractor ctx, float ttx, float tty,
@@ -550,12 +571,12 @@ public class BetterTerminal extends Module {
         String title;
         if (insideBox(bx, by, ttx + BUTTON_NQ_X - SLOT_SIZE / 2.0f, tty + BUTTON_NQ_Y - SLOT_SIZE / 2.0f, SLOT_SIZE)) {
             title = handler.prediction()
-                    ? "[Frosty] Switch to non-queue mode."
-                    : "[Frosty] Already in non-queue mode.";
+                    ? "[Revampes] Switch to non-queue mode."
+                    : "[Revampes] Already in non-queue mode.";
         } else if (insideBox(bx, by, ttx + BUTTON_RS_X - SLOT_SIZE / 2.0f, tty + BUTTON_RS_Y - SLOT_SIZE / 2.0f, SLOT_SIZE)) {
-            title = "[Frosty] Reload terminal state.";
+            title = "[Revampes] Reload terminal state.";
         } else {
-            title = "[Frosty] " + handler.title();
+            title = "[Revampes] " + handler.title();
         }
 
         switchTitle(title);
@@ -601,9 +622,7 @@ public class BetterTerminal extends Module {
         double size = smooth ? button.size(hovered, anyDown) : (hovered && anyDown ? 0.9 : 1.0);
         int color = smooth ? button.color(argb, hovered, anyDown) : argb;
 
-        float half = (float) (SLOT_SIZE / 2.0 * size);
-        RenderUtils.drawRoundedRect(ctx, centerX - half, centerY - half, half * 2.0f, half * 2.0f,
-                (float) cornerRadius.getInput(), color);
+        drawCell(ctx, centerX - SLOT_SIZE / 2.0f, centerY - SLOT_SIZE / 2.0f, size, color);
 
         ctx.centeredText(mc.font, label, (int) centerX, (int) (centerY - 4), textColor.getRGB());
     }

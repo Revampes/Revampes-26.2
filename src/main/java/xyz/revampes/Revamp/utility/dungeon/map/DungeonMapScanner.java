@@ -1,6 +1,7 @@
 package xyz.revampes.Revamp.utility.dungeon.map;
 
 import net.minecraft.network.protocol.game.ClientboundMapItemDataPacket;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.MapItem;
 import net.minecraft.world.level.saveddata.maps.MapDecoration;
 import net.minecraft.world.level.saveddata.maps.MapDecorationTypes;
@@ -33,6 +34,16 @@ public final class DungeonMapScanner {
     private static final Set<Component> unscannedDoors = new HashSet<>();
     private static MapId lastMapId;
     private static long swapCooldown;
+
+    /**
+     * Teammate name to index in the dungeon map's decoration list. Hypixel sends one decoration
+     * per team mate but in an order we cannot reconstruct from the tab list, so the mapping is
+     * learned from the players we can see and then reused for the ones we cannot.
+     */
+    private static final java.util.Map<String, Integer> decorationSlots = new java.util.HashMap<>();
+    private static int decorationSlotCount = -1;
+    /** Largest distance, in map cells, between a decoration and a visible player to pair them. */
+    private static final double DECORATION_MATCH_TOLERANCE = 0.65;
 
     private DungeonMapScanner() {
     }
@@ -89,6 +100,8 @@ public final class DungeonMapScanner {
         }
         lastMapId = null;
         swapCooldown = System.currentTimeMillis() + 6000L;
+        decorationSlots.clear();
+        decorationSlotCount = -1;
     }
 
     public static void onMapPacket(ClientboundMapItemDataPacket packet) {
@@ -160,17 +173,6 @@ public final class DungeonMapScanner {
         if (floor == FloorType.None) return;
         if (roomGap <= 0) return;
 
-        // Hypixel does not send a decoration for the local player, so the decoration list maps
-        // onto the rest of the party in tab-list order.
-        List<DungeonPlayer> teammates = new ArrayList<>();
-        for (DungeonPlayer player : DungeonTracker.players.values()) {
-            if (player == DungeonTracker.selfPlayer || player.isDead || player.isDisconnected) continue;
-            // Players we can see client side are tracked from their entity, which is both more
-            // accurate and keeps the marker from jumping between the two position sources.
-            if (player.entity != null && !player.entity.isRemoved()) continue;
-            teammates.add(player);
-        }
-
         List<MapDecoration> decorations = new ArrayList<>();
         for (MapDecoration decoration : data.getDecorations()) {
             if (decoration == null) continue;
@@ -179,27 +181,120 @@ public final class DungeonMapScanner {
             decorations.add(decoration);
         }
 
-        if (teammates.isEmpty() || decorations.isEmpty()) return;
-
-        // Tolerate a count mismatch: a teammate dying or leaving can leave a stale decoration
-        // behind for a moment, and bailing out here used to drop every marker on the map.
-        int count = Math.min(decorations.size(), teammates.size());
-        for (int i = 0; i < count; i++) {
-            MapDecoration decoration = decorations.get(i);
-            DungeonPlayer player = teammates.get(i);
-
-            double x = MapMath.rescale(
-                    (decoration.x() + 128.0) * 0.5,
-                    mapOffsetX, mapOffsetX + roomGap * floor.roomsW,
-                    0.0, floor.roomsW * 2.0);
-            double z = MapMath.rescale(
-                    (decoration.y() + 128.0) * 0.5,
-                    mapOffsetZ, mapOffsetZ + roomGap * floor.roomsH,
-                    0.0, floor.roomsH * 2.0);
-            double r = -Math.toRadians(decoration.rot() / 16.0 * 360.0 + 90.0);
-
-            player.updatePosition(new PlayerComponent(x, z, r));
+        // A different decoration count means the party changed, so every learned slot is stale.
+        if (decorations.size() != decorationSlotCount) {
+            decorationSlots.clear();
+            decorationSlotCount = decorations.size();
         }
+        if (decorations.isEmpty()) return;
+
+        PlayerComponent[] spots = new PlayerComponent[decorations.size()];
+        for (int i = 0; i < decorations.size(); i++) spots[i] = toComponent(decorations.get(i), floor);
+
+        boolean[] taken = new boolean[spots.length];
+        assignNamedDecorations(decorations, spots, taken);
+
+        // Pair the decorations we can identify with the players we can see: their entity is the
+        // ground truth, and the learned slot lets far away team mates keep the right marker.
+        // The local player takes part too, so a decoration that is actually ours can never be
+        // handed to some far away team mate.
+        List<DungeonPlayer> visible = new ArrayList<>();
+        for (DungeonPlayer player : DungeonTracker.players.values()) {
+            if (player.isDead || player.isDisconnected) continue;
+            if (!hasEntity(player) || player.position == null) continue;
+            visible.add(player);
+        }
+        while (!visible.isEmpty()) {
+            DungeonPlayer bestPlayer = null;
+            int bestSlot = -1;
+            double bestDistance = Double.MAX_VALUE;
+
+            for (DungeonPlayer player : visible) {
+                PlayerComponent live = entityPosition(player);
+                if (live == null) continue;
+
+                for (int i = 0; i < spots.length; i++) {
+                    if (taken[i]) continue;
+
+                    double distance = Math.max(
+                            Math.abs(live.x() - spots[i].x()),
+                            Math.abs(live.z() - spots[i].z()));
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        bestPlayer = player;
+                        bestSlot = i;
+                    }
+                }
+            }
+
+            if (bestPlayer == null || bestDistance > DECORATION_MATCH_TOLERANCE) break;
+            taken[bestSlot] = true;
+            decorationSlots.put(bestPlayer.name, bestSlot);
+            visible.remove(bestPlayer);
+        }
+
+        // Everything left over belongs to teammates outside of our render distance.
+        String selfName = DungeonTracker.selfPlayer == null ? null : DungeonTracker.selfPlayer.name;
+        for (DungeonPlayer player : DungeonTracker.players.values()) {
+            if (player == DungeonTracker.selfPlayer || player.isDead || player.isDisconnected) continue;
+            if (selfName != null && selfName.equalsIgnoreCase(player.name)) continue;
+            if (hasEntity(player)) continue;
+
+            Integer known = decorationSlots.get(player.name);
+            int slot = known != null && known >= 0 && known < spots.length && !taken[known] ? known : firstFreeSlot(taken);
+            if (slot < 0) break;
+
+            taken[slot] = true;
+            decorationSlots.put(player.name, slot);
+            player.updatePosition(spots[slot]);
+        }
+    }
+
+    /** Uses the decoration's own name when the server provides one, which is exact. */
+    private static void assignNamedDecorations(List<MapDecoration> decorations, PlayerComponent[] spots,
+                                               boolean[] taken) {
+        for (int i = 0; i < decorations.size(); i++) {
+            var name = decorations.get(i).name();
+            if (name.isEmpty()) continue;
+
+            DungeonPlayer player = DungeonTracker.players.get(name.get().getString());
+            if (player == null || player == DungeonTracker.selfPlayer) continue;
+
+            taken[i] = true;
+            decorationSlots.put(player.name, i);
+            if (!hasEntity(player)) player.updatePosition(spots[i]);
+        }
+    }
+
+    private static int firstFreeSlot(boolean[] taken) {
+        for (int i = 0; i < taken.length; i++) {
+            if (!taken[i]) return i;
+        }
+        return -1;
+    }
+
+    private static boolean hasEntity(DungeonPlayer player) {
+        return player.entity != null && !player.entity.isRemoved();
+    }
+
+    /** Fresh map position of a player we can currently see, in the same space as the decorations. */
+    private static PlayerComponent entityPosition(DungeonPlayer player) {
+        Player entity = player.entity;
+        if (entity == null || entity.isRemoved()) return null;
+        return PlayerComponent.fromWorld(entity.getX(), entity.getZ(), 0.0);
+    }
+
+    private static PlayerComponent toComponent(MapDecoration decoration, FloorType floor) {
+        double x = MapMath.rescale(
+                (decoration.x() + 128.0) * 0.5,
+                mapOffsetX, mapOffsetX + roomGap * floor.roomsW,
+                0.0, floor.roomsW * 2.0);
+        double z = MapMath.rescale(
+                (decoration.y() + 128.0) * 0.5,
+                mapOffsetZ, mapOffsetZ + roomGap * floor.roomsH,
+                0.0, floor.roomsH * 2.0);
+        double r = -Math.toRadians(decoration.rot() / 16.0 * 360.0 + 90.0);
+        return new PlayerComponent(x, z, r);
     }
 
     private static void updateRooms(byte[] colors) {

@@ -18,6 +18,8 @@ public class DungeonPlayer {
     public double updateTime;
     public PlayerComponent lastPosition;
     public double lastUpdateTime;
+    /** Wall clock of the last time this player was seen in the tab list or as an entity. */
+    public long lastSeen;
 
     public DungeonPlayer(String name, PlayerInfo profileInfo, DungeonClass role, int classLevel, boolean isDead) {
         this.name = name;

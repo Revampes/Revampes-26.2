@@ -37,7 +37,7 @@ public class DungeonMap extends Module {
     public final ButtonSetting useMarkerSelf = add(new ButtonSetting("Use Marker for Self", true), MARKERS);
     public final ButtonSetting renderNames = add(new ButtonSetting("Render Names", true), MARKERS);
     public final ButtonSetting namesRequireLeap =
-            add(new ButtonSetting("Render Names When Holding Leap", true), MARKERS);
+            add(new ButtonSetting("Only Render Names Holding Leap", false), MARKERS);
     public final ButtonSetting useClassName = add(new ButtonSetting("Render Class Name", false), MARKERS);
     public final ButtonSetting colorNameByClass = add(new ButtonSetting("Color Player Names", false), MARKERS);
     public final ButtonSetting colorMarkerByClass = add(new ButtonSetting("Color Player Markers", false), MARKERS);
@@ -358,7 +358,7 @@ public class DungeonMap extends Module {
         textAlignment.setValue(DungeonMapOptions.RoomInfoAlignment.CenterL.ordinal());
         iconAlignment.setValue(DungeonMapOptions.RoomInfoAlignment.TopLeft.ordinal());
         textShadow.setValue(DungeonMapOptions.TextShadow.Drop.ordinal());
-        namesRequireLeap.setEnabled(true);
+        namesRequireLeap.setEnabled(false);
         renderPlayerHeads.setEnabled(true);
         useMarkerSelf.setEnabled(true);
         renderRoomNames.setEnabled(true);

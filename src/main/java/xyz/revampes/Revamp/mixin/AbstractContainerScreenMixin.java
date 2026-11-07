@@ -22,9 +22,10 @@ import xyz.revampes.Revamp.events.impl.ScreenDrawSlotEvent;
 import xyz.revampes.Revamp.events.impl.ScreenKeyPressEvent;
 import xyz.revampes.Revamp.modules.ModuleManager;
 import xyz.revampes.Revamp.modules.impl.dungeon.BetterTerminal;
+import xyz.revampes.Revamp.modules.impl.dungeon.LeapMenu;
 
 /**
- * Ported from IQAddons (net.iqaddons.mod.mixin.HandledScreenMixin) — the parts the
+ * Ported from IQAddons (net.iqaddons.mod.mixin.HandledScreenMixin) - the parts the
  * Croesus helper needs (slot draw overlay + container key press).
  *
  * <p>Extended for Better Terminal: the slot contents can be hidden or shrunk to a thumbnail
@@ -71,8 +72,15 @@ public abstract class AbstractContainerScreenMixin {
     private void frosty$beforeExtractContents(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         frosty$contentsScaled = false;
 
-        BetterTerminal module = ModuleManager.betterTerminal;
         AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+
+        LeapMenu leapMenu = ModuleManager.leapMenu;
+        if (leapMenu != null && leapMenu.hidesVanillaChest(screen)) {
+            ci.cancel();
+            return;
+        }
+
+        BetterTerminal module = ModuleManager.betterTerminal;
         if (module == null) return;
 
         if (module.hidesVanillaChest(screen)) {
@@ -98,9 +106,16 @@ public abstract class AbstractContainerScreenMixin {
 
     @Inject(method = "extractTooltip", at = @At("HEAD"), cancellable = true)
     private void frosty$hideTooltips(GuiGraphicsExtractor context, int mouseX, int mouseY, CallbackInfo ci) {
-        BetterTerminal module = ModuleManager.betterTerminal;
         AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+
+        BetterTerminal module = ModuleManager.betterTerminal;
         if (module != null && module.isTerminalScreen(screen)) {
+            ci.cancel();
+            return;
+        }
+
+        LeapMenu leapMenu = ModuleManager.leapMenu;
+        if (leapMenu != null && leapMenu.hidesVanillaChest(screen)) {
             ci.cancel();
         }
     }
@@ -136,3 +151,4 @@ public abstract class AbstractContainerScreenMixin {
         }
     }
 }
+

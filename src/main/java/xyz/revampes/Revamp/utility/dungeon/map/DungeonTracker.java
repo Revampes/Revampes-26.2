@@ -53,7 +53,10 @@ public final class DungeonTracker {
     private static long lastSecretRoomAt;
     private static Object lastLevel;
     private static int outOfDungeonTicks;
-    private static final int OUT_OF_DUNGEON_GRACE = 20;
+    /** Long enough to ride out boss transitions, tab paging and the Mort dialogue. */
+    private static final int OUT_OF_DUNGEON_GRACE = 100;
+    /** A teammate missing from the tab list for this long has left the run. */
+    private static final long PLAYER_TIMEOUT_MS = 30_000L;
     /** Mirrors IllegalMap: the action bar keeps the previous room's count for a moment. */
     private static final long ROOM_CHANGE_GRACE_MS = 1500L;
 
@@ -107,7 +110,10 @@ public final class DungeonTracker {
         FloorType parsedFloor = parseFloor();
         if (parsedFloor != FloorType.None) floor = parsedFloor;
 
-        boolean inDungeon = parsedFloor != FloorType.None || tabShowsCatacombs();
+        // Three independent sources: the dungeon scoreboard, the dungeon tab list section and the
+        // "Area:" line of the tab list header/footer. Any one of them is enough to stay detected,
+        // because each of them drops out for a moment during a run (boss transition, tab paging).
+        boolean inDungeon = parsedFloor != FloorType.None || tabShowsCatacombs() || areaShowsCatacombs();
         if (!inDungeon) {
             if (wasInDungeon && ++outOfDungeonTicks > OUT_OF_DUNGEON_GRACE) {
                 wasInDungeon = false;
@@ -154,6 +160,16 @@ public final class DungeonTracker {
         return catacombs;
     }
 
+    /** Reads the "Area:" line Hypixel puts in the tab list header/footer. */
+    private static boolean areaShowsCatacombs() {
+        String area = LocationUtils.getCurrentArea();
+        if (area == null || area.isEmpty() || "Unknown".equalsIgnoreCase(area)) return false;
+
+        String lower = area.toLowerCase(Locale.ROOT);
+        if (lower.contains("dungeon hub")) return false;
+        return lower.contains("catacomb");
+    }
+
     private static void updateTab() {
         if (mc.getConnection() == null) return;
 
@@ -186,6 +202,8 @@ public final class DungeonTracker {
                 players.put(playerName, player);
             }
             if (player.profileInfo == null) player.profileInfo = info;
+            player.lastSeen = System.currentTimeMillis();
+            player.isDisconnected = false;
 
             // The placeholder created by reset() already carries our own name, so this normally
             // just adopts the parsed entry. Matching by name keeps us from mistaking the first
@@ -207,6 +225,17 @@ public final class DungeonTracker {
 
             if (level != null && !level.isEmpty()) player.classLevel = parseRoman(level);
         }
+
+        // A team mate that is gone from both the tab list and the connection's player list left the
+        // run. Without this they would keep their last known position and steal a map decoration
+        // from someone who is still here. The timeout keeps tab list paging from tripping this.
+        long now = System.currentTimeMillis();
+        var connection = mc.getConnection();
+        for (DungeonPlayer player : players.values()) {
+            if (player == selfPlayer || player.isDisconnected) continue;
+            if (connection != null && connection.getPlayerInfo(player.name) != null) continue;
+            if (now - player.lastSeen > PLAYER_TIMEOUT_MS) player.isDisconnected = true;
+        }
     }
 
     private static String selfName() {
@@ -217,11 +246,15 @@ public final class DungeonTracker {
     private static void updatePlayerEntities() {
         if (mc.level == null) return;
 
+        long now = System.currentTimeMillis();
         for (AbstractClientPlayer entity : mc.level.players()) {
             DungeonPlayer player = players.get(entity.getName().getString());
             if (player == null) continue;
 
             player.entity = entity;
+            // Seeing the entity keeps a player alive even when their tab entry is on another page.
+            player.lastSeen = now;
+            player.isDisconnected = false;
             if (player.profileInfo == null && mc.getConnection() != null) {
                 player.profileInfo = mc.getConnection().getPlayerInfo(entity.getUUID());
             }

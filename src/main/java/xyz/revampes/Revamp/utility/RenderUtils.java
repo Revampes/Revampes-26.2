@@ -33,6 +33,7 @@ import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.*;
 import org.lwjgl.system.MemoryUtil;
+import xyz.revampes.Revamp.utility.render.RoundedRects;
 
 import javax.lang.model.element.Element;
 import java.awt.Color;
@@ -159,17 +160,8 @@ public class RenderUtils {
     public static void drawRoundedRect(GuiGraphicsExtractor ctx,
                                        float x, float y, float width, float height,
                                        float radius, int color) {
-        int left = (int) x;
-        int top = (int) y;
-        int right = (int) (x + width);
-        int bottom = (int) (y + height);
-        int roundedRadius = Math.max(0, Math.min((int) radius,
-                Math.min((right - left) / 2, (bottom - top) / 2)));
-
-        for (int row = top; row < bottom; row++) {
-            int inset = roundedInset(row - top, bottom - top, roundedRadius);
-            ctx.fill(left + inset, row, right - inset, row + 1, color);
-        }
+        // Anti aliased nine slice: see RoundedRects for why this is not a per-row fill anymore.
+        RoundedRects.fill(ctx, x, y, width, height, radius, color);
     }
 
     public static void drawRoundedBorder(GuiGraphicsExtractor ctx,

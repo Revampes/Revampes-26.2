@@ -27,7 +27,7 @@ public class KeyBindComponent extends Component {
         isHovered = mouseX >= x + width - 70 && mouseX <= x + width - 10 && mouseY >= y && mouseY <= y + height;
 
         String text = listening ? (UI.lang.getValue() == 1 ? "请按下按键" : "Listening...") : setting.getKeyText();
-        context.text(mc.font, UI.lang.getValue() == 1 ? "开关" : "Bind", (int) (x + 2), (int) (y + height / 2 - 4), LiquidGlassStyle.isEnabled() ? LiquidGlassStyle.textColor() : isLight ? Color.BLACK.getRGB() : Color.WHITE.getRGB(), false);
+        context.text(mc.font, UI.lang.getValue() == 1 ? "绑定" : setting.getName(), (int) (x + 2), (int) (y + height / 2 - 4), LiquidGlassStyle.isEnabled() ? LiquidGlassStyle.textColor() : isLight ? Color.BLACK.getRGB() : Color.WHITE.getRGB(), false);
 
         int boxColor = isHovered ? new Color(200, 200, 200).getRGB() : new Color(180, 180, 180).getRGB();
         if (LiquidGlassStyle.isEnabled()) {
@@ -43,12 +43,12 @@ public class KeyBindComponent extends Component {
         if (!listening) return false;
 
         if (keyCode == 256) { // ESC
-            setting.getModule().setBind(0);
+            setting.setKeycode(0);
             listening = false;
             return true;
         }
 
-        setting.getModule().setBind(keyCode);
+        setting.setKeycode(keyCode);
         listening = false;
         return true;
     }

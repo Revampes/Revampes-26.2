@@ -3,16 +3,31 @@ package xyz.revampes.Revamp.settings.impl;
 import com.mojang.blaze3d.platform.InputConstants;
 import xyz.revampes.Revamp.modules.Module;
 
+/**
+ * A bindable key.
+ *
+ * <p>Every module owns one via its constructor, bound to the module's own key code. Modules that
+ * need extra binds (the leap menu's per-slot hotkeys, for example) create standalone instances
+ * that carry their own key code instead.
+ */
 public class KeyBindSetting extends ButtonSetting {
+
     private final Module module;
+    private int ownKeycode;
 
     public KeyBindSetting(Module module) {
         super("KeyBind", false);
         this.module = module;
     }
 
+    public KeyBindSetting(String name, int defaultKeycode) {
+        super(name, false);
+        this.module = null;
+        this.ownKeycode = defaultKeycode;
+    }
+
     public String getKeyText() {
-        int keycode = module.getKeycode();
+        int keycode = getKeycode();
         if (keycode == 0) return "None";
         if (keycode >= 1000) {
             if (keycode == 1069) return "Scroll Up";
@@ -32,6 +47,23 @@ public class KeyBindSetting extends ButtonSetting {
         }
     }
 
+    public int getKeycode() {
+        return module != null ? module.getKeycode() : ownKeycode;
+    }
+
+    public void setKeycode(int keycode) {
+        if (module != null) {
+            module.setBind(keycode);
+        } else {
+            this.ownKeycode = keycode;
+        }
+    }
+
+    public boolean isStandalone() {
+        return module == null;
+    }
+
+    /** The owning module, or {@code null} for a standalone bind. */
     public Module getModule() {
         return module;
     }
